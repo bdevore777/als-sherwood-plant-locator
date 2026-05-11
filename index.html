@@ -4,180 +4,151 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ALS Sherwood Plant Locator</title>
-
 <style>
-body{
-  font-family:Arial,sans-serif;
-  margin:0;
-  padding:0;
-  background:#f4f7f2;
-  color:#1f3322;
-}
-
-header{
-  background:#1f5c2d;
-  color:white;
-  padding:20px;
-  text-align:center;
-}
-
-.container{
-  padding:16px;
-  max-width:800px;
-  margin:auto;
-}
-
-input,textarea,select{
-  width:100%;
-  padding:12px;
-  margin-top:8px;
-  margin-bottom:12px;
-  border-radius:8px;
-  border:1px solid #ccc;
-  box-sizing:border-box;
-}
-
-button{
-  background:#2f7d3c;
-  color:white;
-  border:none;
-  padding:12px 16px;
-  border-radius:8px;
-  cursor:pointer;
-  margin-top:8px;
-}
-
-.card{
-  background:white;
-  padding:14px;
-  border-radius:12px;
-  margin-top:12px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.1);
-}
-
-.small{
-  font-size:14px;
-  color:#666;
-}
+:root{--green:#1f5c2d;--green2:#2f7d3c;--pale:#f4f7f2;--card:#fff;--line:#cfd8cf;--text:#1f3322;}
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;margin:0;padding:0;background:var(--pale);color:var(--text);}
+header{background:var(--green);color:white;padding:22px 16px;text-align:center;}
+header h1{margin:0 0 8px;font-size:28px} header p{margin:0;font-size:15px;opacity:.95}
+.container{padding:16px;max-width:850px;margin:auto;}
+.panel{background:white;border:1px solid var(--line);border-radius:14px;padding:14px;margin:14px 0;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+input,textarea,select{width:100%;padding:12px;margin-top:8px;margin-bottom:12px;border-radius:9px;border:1px solid #bfc8bf;font-size:16px;background:white;}
+textarea{min-height:72px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+button{background:var(--green2);color:white;border:none;padding:12px 16px;border-radius:9px;cursor:pointer;margin:4px 6px 4px 0;font-weight:700;font-size:15px}.secondary{background:#eaf2ea;color:#17351d;border:1px solid #cfe0cf}.danger{background:#a33}.gold{background:#d69b20;color:#2d2100}
+.card{background:white;padding:14px;border-radius:12px;margin-top:12px;border:1px solid var(--line);box-shadow:0 2px 6px rgba(0,0,0,0.06)}
+.card h3{margin:0 0 4px}.small{font-size:14px;color:#666}.muted{color:#66736a;font-size:14px}.pill{display:inline-block;background:#e8f3ea;border:1px solid #cfe0cf;color:#214d29;padding:4px 9px;border-radius:999px;font-size:13px;margin:3px 4px 3px 0}.actions{margin-top:8px}.hidden{display:none}.status{padding:10px;border-radius:9px;background:#eef7ee;margin-top:10px;font-size:14px}
+@media(max-width:650px){.row,.row3{grid-template-columns:1fr} header h1{font-size:24px}.container{padding:12px}}
 </style>
 </head>
-
 <body>
-
 <header>
 <h1>ALS Sherwood Plant Locator</h1>
-<p>Personal plant location tracker for Al's Garden & Home</p>
+<p>Personal plant location tracker for Al's Garden & Home — Sherwood</p>
 </header>
-
 <div class="container">
 
-<h2>Add Plant</h2>
-
-<input id="name" placeholder="Plant Name">
-
-<select id="category">
-<option>Annual</option>
-<option>Perennial</option>
-<option>Shrub</option>
-<option>Tree</option>
-<option>Edible</option>
-<option>Houseplant</option>
-<option>Other</option>
-</select>
-
-<input id="location" placeholder="Store Location">
-
-<textarea id="notes" placeholder="Notes"></textarea>
-
-<button onclick="addPlant()">Save Plant</button>
-
-<hr>
-
-<h2>Search</h2>
-
-<input id="search" placeholder="Search plants..." onkeyup="renderPlants()">
-
-<div id="results"></div>
-
+<div class="panel">
+<h2>Quick Search</h2>
+<input id="search" list="plantSuggestions" placeholder="Start typing: hydrangea, fern, maple..." oninput="renderPlants(); rememberSearch(this.value)">
+<datalist id="plantSuggestions"></datalist>
+<div id="recentSearches" class="muted"></div>
 </div>
 
+<div class="panel">
+<h2>Add / Update Plant</h2>
+<p class="muted">Start typing a known plant name and it will auto-suggest from plants you already saved or imported.</p>
+<input id="name" list="plantSuggestions" placeholder="Plant Name">
+<div class="row">
+<select id="category">
+<option>Annual</option><option>Perennial</option><option>Shrub</option><option>Tree</option><option>Edible</option><option>Houseplant</option><option>Vine / Groundcover</option><option>Other</option>
+</select>
+<input id="location" placeholder="Store Location, e.g. Perennial House Table 4">
+</div>
+<textarea id="notes" placeholder="Notes, e.g. shade table, blue tags, ask lead if not on bench"></textarea>
+<button onclick="addOrUpdatePlant()">Save Plant</button>
+<button class="secondary" onclick="clearForm()">Clear Form</button>
+</div>
+
+<div class="panel">
+<h2>Bulk Import / Backup</h2>
+<p class="muted">Import a CSV from plant-tag photos later. CSV columns: Plant Name, Category, Location, Notes.</p>
+<input type="file" id="csvFile" accept=".csv,text/csv" onchange="importCSV(event)">
+<button class="secondary" onclick="exportCSV()">Export Backup CSV</button>
+<button class="danger" onclick="clearAllData()">Clear All Saved Plants</button>
+<div id="importStatus" class="status hidden"></div>
+</div>
+
+<div class="panel">
+<div class="row">
+<h2>Saved Plants</h2>
+<select id="categoryFilter" onchange="renderPlants()">
+<option value="">All Categories</option><option>Annual</option><option>Perennial</option><option>Shrub</option><option>Tree</option><option>Edible</option><option>Houseplant</option><option>Vine / Groundcover</option><option>Other</option>
+</select>
+</div>
+<div id="results"></div>
+</div>
+
+</div>
 <script>
-
 let plants = JSON.parse(localStorage.getItem('alsPlants') || '[]');
+let recent = JSON.parse(localStorage.getItem('alsRecentSearches') || '[]');
 
-function savePlants(){
-  localStorage.setItem('alsPlants', JSON.stringify(plants));
+function normalize(s){return (s||'').trim();}
+function keyName(s){return normalize(s).toLowerCase();}
+function savePlants(){localStorage.setItem('alsPlants', JSON.stringify(plants)); updateSuggestions();}
+function saveRecent(){localStorage.setItem('alsRecentSearches', JSON.stringify(recent.slice(0,8)));}
+
+function updateSuggestions(){
+  const dl=document.getElementById('plantSuggestions'); dl.innerHTML='';
+  [...new Set(plants.map(p=>p.name).filter(Boolean).sort((a,b)=>a.localeCompare(b)))].forEach(name=>{
+    const opt=document.createElement('option'); opt.value=name; dl.appendChild(opt);
+  });
 }
 
-function addPlant(){
-
-  const plant = {
-    name: document.getElementById('name').value,
-    category: document.getElementById('category').value,
-    location: document.getElementById('location').value,
-    notes: document.getElementById('notes').value
-  };
-
-  plants.push(plant);
-
-  savePlants();
-
-  renderPlants();
-
-  alert('Plant saved');
-
-  document.getElementById('name').value='';
-  document.getElementById('location').value='';
-  document.getElementById('notes').value='';
+function rememberSearch(q){
+  q=normalize(q); if(q.length<3) return;
+  recent=[q,...recent.filter(x=>x.toLowerCase()!=q.toLowerCase())].slice(0,8); saveRecent(); renderRecent();
 }
+function renderRecent(){
+  const box=document.getElementById('recentSearches');
+  if(!recent.length){box.innerHTML=''; return;}
+  box.innerHTML='Recent: '+recent.map(r=>`<span class="pill" onclick="setSearch('${escapeAttr(r)}')">${escapeHtml(r)}</span>`).join('');
+}
+function setSearch(v){document.getElementById('search').value=v; renderPlants();}
+
+function addOrUpdatePlant(){
+  const plant={name:normalize(document.getElementById('name').value),category:document.getElementById('category').value,location:normalize(document.getElementById('location').value),notes:normalize(document.getElementById('notes').value),updated:new Date().toISOString()};
+  if(!plant.name){alert('Enter a plant name first.'); return;}
+  const idx=plants.findIndex(p=>keyName(p.name)===keyName(plant.name));
+  if(idx>=0){plants[idx]={...plants[idx],...plant};}
+  else{plants.push(plant);}
+  savePlants(); clearForm(); renderPlants(); showStatus(idx>=0?'Updated existing plant.':'Saved new plant.');
+}
+function clearForm(){document.getElementById('name').value='';document.getElementById('location').value='';document.getElementById('notes').value='';}
+function editPlant(i){const p=plants[i];document.getElementById('name').value=p.name;document.getElementById('category').value=p.category||'Other';document.getElementById('location').value=p.location||'';document.getElementById('notes').value=p.notes||'';window.scrollTo({top:0,behavior:'smooth'});}
+function deletePlant(i){if(confirm('Delete this plant?')){plants.splice(i,1);savePlants();renderPlants();}}
 
 function renderPlants(){
+  const q=keyName(document.getElementById('search').value); const cat=document.getElementById('categoryFilter').value;
+  const results=document.getElementById('results'); results.innerHTML='';
+  const matches=plants.filter(p=>{
+    const hay=[p.name,p.category,p.location,p.notes].join(' ').toLowerCase();
+    return (!q || hay.includes(q)) && (!cat || p.category===cat);
+  }).sort((a,b)=>a.name.localeCompare(b.name));
+  if(!matches.length){results.innerHTML='<p class="muted">No saved plants match yet. Add a plant or import a CSV.</p>'; return;}
+  matches.forEach(p=>{
+    const realIndex=plants.indexOf(p); const div=document.createElement('div'); div.className='card';
+    div.innerHTML=`<h3>${escapeHtml(p.name)}</h3><div><span class="pill">${escapeHtml(p.category||'Other')}</span></div><p><strong>Location:</strong> ${escapeHtml(p.location||'')}</p><p>${escapeHtml(p.notes||'')}</p><div class="actions"><button class="secondary" onclick="editPlant(${realIndex})">Edit</button><button class="danger" onclick="deletePlant(${realIndex})">Delete</button></div>`;
+    results.appendChild(div);
+  });
+}
 
-  const q = document.getElementById('search').value.toLowerCase();
-
-  const results = document.getElementById('results');
-
-  results.innerHTML='';
-
-  plants
-    .filter(p =>
-      p.name.toLowerCase().includes(q) ||
-      p.category.toLowerCase().includes(q) ||
-      p.location.toLowerCase().includes(q)
-    )
-    .forEach((p,i)=>{
-
-      const div = document.createElement('div');
-
-      div.className='card';
-
-      div.innerHTML=`
-        <h3>${p.name}</h3>
-        <div class="small">${p.category}</div>
-        <p><strong>Location:</strong> ${p.location}</p>
-        <p>${p.notes}</p>
-        <button onclick="deletePlant(${i})">Delete</button>
-      `;
-
-      results.appendChild(div);
-
+function csvSplit(line){
+  const out=[]; let cur=''; let inQ=false;
+  for(let i=0;i<line.length;i++){const c=line[i]; if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;} else if(c===','&&!inQ){out.push(cur);cur='';} else cur+=c;}
+  out.push(cur); return out.map(x=>x.trim());
+}
+function importCSV(e){
+  const file=e.target.files[0]; if(!file)return; const reader=new FileReader();
+  reader.onload=()=>{const lines=reader.result.split(/\r?\n/).filter(l=>l.trim()); let added=0,updated=0;
+    lines.forEach((line,idx)=>{if(idx===0 && /plant name|name/i.test(line))return; const [name,category,location,notes]=csvSplit(line); if(!name)return;
+      const plant={name:normalize(name),category:normalize(category)||'Other',location:normalize(location),notes:normalize(notes),updated:new Date().toISOString()};
+      const existing=plants.findIndex(p=>keyName(p.name)===keyName(plant.name)); if(existing>=0){plants[existing]={...plants[existing],...plant};updated++;} else {plants.push(plant);added++;}
     });
-
+    savePlants(); renderPlants(); showStatus(`Import complete: ${added} added, ${updated} updated.`); e.target.value='';};
+  reader.readAsText(file);
 }
-
-function deletePlant(i){
-
-  plants.splice(i,1);
-
-  savePlants();
-
-  renderPlants();
-
+function exportCSV(){
+  const rows=[['Plant Name','Category','Location','Notes'],...plants.map(p=>[p.name,p.category,p.location,p.notes])];
+  const csv=rows.map(r=>r.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='als-plant-locator-backup.csv'; a.click(); URL.revokeObjectURL(url);
 }
-
-renderPlants();
-
+function clearAllData(){if(confirm('Clear ALL saved plants from this device? Export a backup first if needed.')){plants=[];savePlants();renderPlants();showStatus('All saved plants cleared.');}}
+function showStatus(msg){const s=document.getElementById('importStatus');s.textContent=msg;s.classList.remove('hidden');setTimeout(()=>s.classList.add('hidden'),4500);}
+function escapeHtml(s){return String(s||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
+function escapeAttr(s){return String(s||'').replace(/'/g,"&#39;").replace(/\"/g,'&quot;');}
+updateSuggestions(); renderRecent(); renderPlants();
 </script>
-
 </body>
 </html>
