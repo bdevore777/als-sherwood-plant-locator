@@ -4,16 +4,64 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ALS Sherwood Plant Locator</title>
+
 <style>
-body{font-family:Arial,sans-serif;margin:0;padding:0;background:#f4f7f2;color:#1f3322;}
-header{background:#1f5c2d;color:white;padding:20px;text-align:center;}
-.container{padding:16px;max-width:800px;margin:auto;}
-input,textarea,select{width:100%;padding:12px;margin-top:8px;margin-bottom:12px;border-radius:8px;border:1px solid #ccc;box-sizing:border-box;}
-button{background:#2f7d3c;color:white;border:none;padding:12px 16px;border-radius:8px;cursor:pointer;margin-right:8px;margin-top:6px;}
-.card{background:white;padding:14px;border-radius:12px;margin-top:12px;box-shadow:0 2px 6px rgba(0,0,0,0.1);}
-.small{font-size:14px;color:#666;}
+body{
+  font-family:Arial,sans-serif;
+  margin:0;
+  padding:0;
+  background:#f4f7f2;
+  color:#1f3322;
+}
+
+header{
+  background:#1f5c2d;
+  color:white;
+  padding:20px;
+  text-align:center;
+}
+
+.container{
+  padding:16px;
+  max-width:800px;
+  margin:auto;
+}
+
+input,textarea,select{
+  width:100%;
+  padding:12px;
+  margin-top:8px;
+  margin-bottom:12px;
+  border-radius:8px;
+  border:1px solid #ccc;
+  box-sizing:border-box;
+}
+
+button{
+  background:#2f7d3c;
+  color:white;
+  border:none;
+  padding:12px 16px;
+  border-radius:8px;
+  cursor:pointer;
+  margin-top:8px;
+}
+
+.card{
+  background:white;
+  padding:14px;
+  border-radius:12px;
+  margin-top:12px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
+
+.small{
+  font-size:14px;
+  color:#666;
+}
 </style>
 </head>
+
 <body>
 
 <header>
@@ -46,6 +94,7 @@ button{background:#2f7d3c;color:white;border:none;padding:12px 16px;border-radiu
 <hr>
 
 <h2>Search</h2>
+
 <input id="search" placeholder="Search plants..." onkeyup="renderPlants()">
 
 <div id="results"></div>
@@ -53,6 +102,7 @@ button{background:#2f7d3c;color:white;border:none;padding:12px 16px;border-radiu
 </div>
 
 <script>
+
 let plants = JSON.parse(localStorage.getItem('alsPlants') || '[]');
 
 function savePlants(){
@@ -60,6 +110,7 @@ function savePlants(){
 }
 
 function addPlant(){
+
   const plant = {
     name: document.getElementById('name').value,
     category: document.getElementById('category').value,
@@ -68,7 +119,9 @@ function addPlant(){
   };
 
   plants.push(plant);
+
   savePlants();
+
   renderPlants();
 
   alert('Plant saved');
@@ -79,8 +132,11 @@ function addPlant(){
 }
 
 function renderPlants(){
+
   const q = document.getElementById('search').value.toLowerCase();
+
   const results = document.getElementById('results');
+
   results.innerHTML='';
 
   plants
@@ -90,8 +146,11 @@ function renderPlants(){
       p.location.toLowerCase().includes(q)
     )
     .forEach((p,i)=>{
+
       const div = document.createElement('div');
+
       div.className='card';
+
       div.innerHTML=`
         <h3>${p.name}</h3>
         <div class="small">${p.category}</div>
@@ -99,17 +158,25 @@ function renderPlants(){
         <p>${p.notes}</p>
         <button onclick="deletePlant(${i})">Delete</button>
       `;
+
       results.appendChild(div);
+
     });
+
 }
 
 function deletePlant(i){
+
   plants.splice(i,1);
+
   savePlants();
+
   renderPlants();
+
 }
 
 renderPlants();
+
 </script>
 
 </body>
