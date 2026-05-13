@@ -15,190 +15,41 @@
     --line:#d9e2d7;
     --yellow:#fff7d6;
   }
-  body{
-    font-family: Arial, sans-serif;
-    margin:0;
-    padding:0;
-    background:var(--light);
-    color:var(--text);
-  }
-  header{
-    background:var(--green);
-    color:white;
-    padding:18px 16px;
-    text-align:center;
-  }
-  header h1{
-    margin:0;
-    font-size:24px;
-  }
-  header p{
-    margin:6px 0 0;
-    font-size:14px;
-  }
-  .container{
-    padding:14px;
-    max-width:900px;
-    margin:auto;
-  }
-  .section{
-    background:white;
-    border-radius:14px;
-    padding:14px;
-    margin:12px 0;
-    box-shadow:0 2px 8px rgba(0,0,0,0.08);
-  }
-  h2{
-    margin:4px 0 12px;
-    font-size:20px;
-  }
-  h3{
-    margin:0 0 6px;
-    font-size:19px;
-  }
-  input, textarea, select{
-    width:100%;
-    padding:12px;
-    margin-top:7px;
-    margin-bottom:10px;
-    border-radius:9px;
-    border:1px solid #cfd8cf;
-    box-sizing:border-box;
-    font-size:16px;
-  }
-  textarea{
-    min-height:72px;
-  }
-  button{
-    background:var(--green2);
-    color:white;
-    border:none;
-    padding:11px 14px;
-    border-radius:9px;
-    cursor:pointer;
-    margin:4px 4px 4px 0;
-    font-size:15px;
-  }
-  button.secondary{
-    background:#607466;
-  }
-  button.danger{
-    background:#9b3b35;
-  }
-  button.light{
-    background:#eaf2e8;
-    color:#23462a;
-    border:1px solid var(--line);
-  }
-  .search-row{
-    display:flex;
-    gap:8px;
-    align-items:center;
-  }
-  .search-row input{
-    margin-bottom:6px;
-  }
-  .search-row button{
-    white-space:nowrap;
-    height:44px;
-  }
-  .suggestions{
-    background:white;
-    border:1px solid var(--line);
-    border-radius:10px;
-    overflow:hidden;
-    margin-top:4px;
-    display:none;
-  }
-  .suggestion{
-    padding:10px 12px;
-    border-bottom:1px solid #eef2ed;
-    cursor:pointer;
-  }
-  .suggestion:last-child{
-    border-bottom:none;
-  }
-  .suggestion:hover{
-    background:#f0f7ef;
-  }
-  .results-header{
-    margin-top:12px;
-    padding:10px 12px;
-    border-radius:10px;
-    background:var(--yellow);
-    border:1px solid #eadb93;
-    font-weight:bold;
-    display:none;
-  }
-  .card{
-    background:var(--card);
-    padding:14px;
-    border-radius:12px;
-    margin-top:12px;
-    border:1px solid var(--line);
-    box-shadow:0 1px 5px rgba(0,0,0,0.06);
-  }
-  .plant-title{
-    display:flex;
-    justify-content:space-between;
-    gap:10px;
-    align-items:flex-start;
-  }
-  .badge{
-    display:inline-block;
-    padding:4px 8px;
-    border-radius:999px;
-    font-size:12px;
-    background:#e6f0e5;
-    color:#254b2c;
-    margin:2px 4px 4px 0;
-  }
-  .location{
-    font-size:18px;
-    font-weight:bold;
-    color:#174f24;
-    margin:8px 0;
-  }
-  .field{
-    margin:7px 0;
-    line-height:1.35;
-  }
-  .label{
-    font-weight:bold;
-    color:#354739;
-  }
-  .muted{
-    color:var(--muted);
-    font-size:14px;
-  }
-  .botanical{
-    font-style:italic;
-    color:#374a3b;
-  }
-  .pronunciation{
-    color:#5c6b61;
-    font-size:14px;
-  }
-  .actions{
-    margin-top:10px;
-  }
-  .grid{
-    display:grid;
-    grid-template-columns:1fr;
-    gap:8px;
-  }
-  @media(min-width:700px){
-    .grid.two{
-      grid-template-columns:1fr 1fr;
-    }
-  }
-  .small-note{
-    font-size:13px;
-    color:#5e6b61;
-  }
-  .hidden{
-    display:none;
-  }
+  body{font-family:Arial,sans-serif;margin:0;padding:0;background:var(--light);color:var(--text);}
+  header{background:var(--green);color:white;padding:18px 16px;text-align:center;}
+  header h1{margin:0;font-size:24px;}
+  header p{margin:6px 0 0;font-size:14px;}
+  .container{padding:14px;max-width:900px;margin:auto;}
+  .section{background:white;border-radius:14px;padding:14px;margin:12px 0;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+  h2{margin:4px 0 12px;font-size:20px;}
+  h3{margin:0 0 6px;font-size:19px;}
+  input,textarea,select{width:100%;padding:12px;margin-top:7px;margin-bottom:10px;border-radius:9px;border:1px solid #cfd8cf;box-sizing:border-box;font-size:16px;}
+  textarea{min-height:72px;}
+  button{background:var(--green2);color:white;border:none;padding:11px 14px;border-radius:9px;cursor:pointer;margin:4px 4px 4px 0;font-size:15px;}
+  button.secondary{background:#607466;}
+  button.danger{background:#9b3b35;}
+  button.light{background:#eaf2e8;color:#23462a;border:1px solid var(--line);}
+  .search-row{display:flex;gap:8px;align-items:center;}
+  .search-row input{margin-bottom:6px;}
+  .search-row button{white-space:nowrap;height:44px;}
+  .suggestions{background:white;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:4px;display:none;}
+  .suggestion{padding:10px 12px;border-bottom:1px solid #eef2ed;cursor:pointer;}
+  .suggestion:last-child{border-bottom:none;}
+  .suggestion:hover{background:#f0f7ef;}
+  .results-header{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--yellow);border:1px solid #eadb93;font-weight:bold;display:none;}
+  .card{background:var(--card);padding:14px;border-radius:12px;margin-top:12px;border:1px solid var(--line);box-shadow:0 1px 5px rgba(0,0,0,0.06);}
+  .badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;background:#e6f0e5;color:#254b2c;margin:2px 4px 4px 0;}
+  .location{font-size:18px;font-weight:bold;color:#174f24;margin:8px 0;}
+  .field{margin:7px 0;line-height:1.35;}
+  .label{font-weight:bold;color:#354739;}
+  .muted{color:var(--muted);font-size:14px;}
+  .botanical{font-style:italic;color:#374a3b;}
+  .pronunciation{color:#5c6b61;font-size:14px;}
+  .actions{margin-top:10px;}
+  .grid{display:grid;grid-template-columns:1fr;gap:8px;}
+  @media(min-width:700px){.grid.two{grid-template-columns:1fr 1fr;}}
+  .small-note{font-size:13px;color:#5e6b61;}
+  .count-pill{display:inline-block;background:#eaf2e8;border:1px solid var(--line);padding:5px 9px;border-radius:999px;font-size:13px;margin-top:6px;}
 </style>
 </head>
 <body>
@@ -217,6 +68,7 @@
       <button class="light" onclick="clearSearch()">Clear</button>
     </div>
     <div id="suggestions" class="suggestions"></div>
+    <div id="databaseCount" class="count-pill"></div>
     <div id="resultsHeader" class="results-header">Your Results</div>
     <div id="results"></div>
   </div>
@@ -224,20 +76,16 @@
   <div class="section">
     <h2>Add / Update Plant</h2>
     <div class="grid two">
-      <div>
-        <input id="name" placeholder="Plant Name" />
-      </div>
-      <div>
-        <select id="category">
-          <option>Annual</option>
-          <option selected>Perennial</option>
-          <option>Shrub</option>
-          <option>Tree</option>
-          <option>Edible</option>
-          <option>Houseplant</option>
-          <option>Other</option>
-        </select>
-      </div>
+      <input id="name" placeholder="Plant Name" />
+      <select id="category">
+        <option>Annual</option>
+        <option selected>Perennial</option>
+        <option>Shrub</option>
+        <option>Tree</option>
+        <option>Edible</option>
+        <option>Houseplant</option>
+        <option>Other</option>
+      </select>
     </div>
 
     <div class="grid two">
@@ -269,7 +117,6 @@
   <div class="section">
     <h2>Import / Backup</h2>
     <p class="small-note">Import CSV files made from plant tags. Export backup often so you do not lose phone data.</p>
-
     <input type="file" id="csvFile" accept=".csv,text/csv" />
     <button onclick="importCSV()">Import CSV</button>
     <button class="light" onclick="clearFilePicker()">Clear Import File</button>
@@ -314,26 +161,21 @@ function normalizePlant(p){
 
 plants = plants.map(normalizePlant);
 savePlants();
+updateDatabaseCount();
 
 function savePlants(){
   localStorage.setItem('alsPlants', JSON.stringify(plants));
+  updateDatabaseCount();
+}
+
+function updateDatabaseCount(){
+  const el = document.getElementById('databaseCount');
+  if(el) el.textContent = `${plants.length} saved plants. Search above to show results.`;
 }
 
 function plantSearchText(p){
   p = normalizePlant(p);
-  return [
-    p.name,
-    p.category,
-    p.botanical,
-    p.pronunciation,
-    p.location,
-    p.price,
-    p.light,
-    p.size,
-    p.evergreen,
-    p.aliases,
-    p.notes
-  ].join(" ").toLowerCase();
+  return [p.name,p.category,p.botanical,p.pronunciation,p.location,p.price,p.light,p.size,p.evergreen,p.aliases,p.notes].join(" ").toLowerCase();
 }
 
 function savePlant(){
@@ -365,7 +207,7 @@ function savePlant(){
 
   savePlants();
   clearForm();
-  renderSearch();
+  clearSearch();
   alert("Plant saved.");
 }
 
@@ -391,7 +233,7 @@ function editPlant(index){
   fields.aliases.value = p.aliases;
   fields.notes.value = p.notes;
   editingIndex = index;
-  window.scrollTo({top: document.querySelector(".section:nth-of-type(2)").offsetTop - 10, behavior:"smooth"});
+  document.querySelectorAll(".section")[1].scrollIntoView({behavior:"smooth"});
 }
 
 function deletePlant(index){
@@ -403,43 +245,24 @@ function deletePlant(index){
 }
 
 function escapeHTML(str){
-  return String(str || "").replace(/[&<>"']/g, m => ({
-    "&":"&amp;",
-    "<":"&lt;",
-    ">":"&gt;",
-    '"':"&quot;",
-    "'":"&#039;"
-  }[m]));
+  return String(str || "").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 }
 
 function renderCard(p, index){
   p = normalizePlant(p);
-
-  const metaBadges = [
-    p.category,
-    p.light,
-    p.evergreen
-  ].filter(Boolean).map(x => `<span class="badge">${escapeHTML(x)}</span>`).join("");
+  const metaBadges = [p.category,p.light,p.evergreen].filter(Boolean).map(x => `<span class="badge">${escapeHTML(x)}</span>`).join("");
 
   return `
     <div class="card">
-      <div class="plant-title">
-        <div>
-          <h3>${escapeHTML(p.name)}</h3>
-          ${p.botanical ? `<div class="botanical">${escapeHTML(p.botanical)}</div>` : ""}
-          ${p.pronunciation ? `<div class="pronunciation">Pronunciation: ${escapeHTML(p.pronunciation)}</div>` : ""}
-        </div>
-      </div>
-
+      <h3>${escapeHTML(p.name)}</h3>
+      ${p.botanical ? `<div class="botanical">${escapeHTML(p.botanical)}</div>` : ""}
+      ${p.pronunciation ? `<div class="pronunciation">Pronunciation: ${escapeHTML(p.pronunciation)}</div>` : ""}
       <div>${metaBadges}</div>
-
       ${p.location ? `<div class="location">📍 ${escapeHTML(p.location)}</div>` : `<div class="location">📍 Location not entered</div>`}
-
       ${p.price ? `<div class="field"><span class="label">Price:</span> ${escapeHTML(p.price)}</div>` : ""}
       ${p.size ? `<div class="field"><span class="label">Size:</span> ${escapeHTML(p.size)}</div>` : ""}
       ${p.aliases ? `<div class="field"><span class="label">Search aliases:</span> ${escapeHTML(p.aliases)}</div>` : ""}
       ${p.notes ? `<div class="field"><span class="label">Customer tidbits:</span><br>${escapeHTML(p.notes)}</div>` : ""}
-
       <div class="actions">
         <button onclick="editPlant(${index})">Edit</button>
         <button class="danger" onclick="deletePlant(${index})">Delete</button>
@@ -451,9 +274,7 @@ function renderCard(p, index){
 function getMatches(query){
   const q = query.trim().toLowerCase();
   if(!q) return [];
-  return plants
-    .map((p, i) => ({p: normalizePlant(p), i}))
-    .filter(item => plantSearchText(item.p).includes(q));
+  return plants.map((p, i) => ({p: normalizePlant(p), i})).filter(item => plantSearchText(item.p).includes(q));
 }
 
 function renderSearch(){
@@ -461,7 +282,6 @@ function renderSearch(){
   const results = document.getElementById('results');
   const header = document.getElementById('resultsHeader');
   const suggestions = document.getElementById('suggestions');
-
   const matches = getMatches(q);
 
   if(!q.trim()){
@@ -474,9 +294,7 @@ function renderSearch(){
 
   header.style.display = "block";
   header.textContent = matches.length ? `Your Results (${matches.length})` : "Your Results — No matches found";
-
   results.innerHTML = matches.map(item => renderCard(item.p, item.i)).join("");
-
   renderSuggestions(q, matches);
 }
 
@@ -488,8 +306,7 @@ function renderSuggestions(q, matches){
     return;
   }
 
-  const top = matches.slice(0,8);
-  suggestions.innerHTML = top.map(item => `
+  suggestions.innerHTML = matches.slice(0,8).map(item => `
     <div class="suggestion" onclick="chooseSuggestion('${encodeURIComponent(item.p.name)}')">
       <strong>${escapeHTML(item.p.name)}</strong>
       ${item.p.location ? `<span class="muted"> — ${escapeHTML(item.p.location)}</span>` : ""}
@@ -499,8 +316,7 @@ function renderSuggestions(q, matches){
 }
 
 function chooseSuggestion(encodedName){
-  const name = decodeURIComponent(encodedName);
-  document.getElementById('quickSearch').value = name;
+  document.getElementById('quickSearch').value = decodeURIComponent(encodedName);
   document.getElementById('suggestions').style.display = "none";
   renderSearch();
 }
@@ -511,7 +327,6 @@ function clearSearch(){
   document.getElementById('resultsHeader').style.display = "none";
   document.getElementById('suggestions').innerHTML = "";
   document.getElementById('suggestions').style.display = "none";
-  document.getElementById('quickSearch').focus();
 }
 
 document.getElementById('quickSearch').addEventListener('input', renderSearch);
@@ -519,31 +334,18 @@ document.getElementById('quickSearch').addEventListener('search', renderSearch);
 
 function parseCSV(text){
   const rows = [];
-  let current = "";
-  let row = [];
-  let inQuotes = false;
-
+  let current = "", row = [], inQuotes = false;
   for(let i=0; i<text.length; i++){
-    const c = text[i];
-    const next = text[i+1];
-
-    if(c === '"' && inQuotes && next === '"'){
-      current += '"';
-      i++;
-    } else if(c === '"'){
-      inQuotes = !inQuotes;
-    } else if(c === ',' && !inQuotes){
-      row.push(current);
-      current = "";
-    } else if((c === '\n' || c === '\r') && !inQuotes){
+    const c = text[i], next = text[i+1];
+    if(c === '"' && inQuotes && next === '"'){ current += '"'; i++; }
+    else if(c === '"'){ inQuotes = !inQuotes; }
+    else if(c === ',' && !inQuotes){ row.push(current); current = ""; }
+    else if((c === '\n' || c === '\r') && !inQuotes){
       if(c === '\r' && next === '\n') i++;
       row.push(current);
       if(row.some(cell => cell.trim() !== "")) rows.push(row);
-      row = [];
-      current = "";
-    } else {
-      current += c;
-    }
+      row = []; current = "";
+    } else current += c;
   }
   row.push(current);
   if(row.some(cell => cell.trim() !== "")) rows.push(row);
@@ -553,86 +355,46 @@ function parseCSV(text){
 function importCSV(){
   const fileInput = document.getElementById('csvFile');
   const file = fileInput.files[0];
-
-  if(!file){
-    alert("Choose a CSV file first.");
-    return;
-  }
+  if(!file){ alert("Choose a CSV file first."); return; }
 
   const reader = new FileReader();
   reader.onload = function(e){
-    const text = e.target.result;
-    const rows = parseCSV(text);
-    if(rows.length < 2){
-      alert("CSV appears empty or missing rows.");
-      return;
-    }
+    const rows = parseCSV(e.target.result);
+    if(rows.length < 2){ alert("CSV appears empty or missing rows."); return; }
 
     const headers = rows[0].map(h => h.trim());
     let count = 0;
-
     for(let r=1; r<rows.length; r++){
       const obj = {};
       headers.forEach((h, i) => obj[h] = rows[r][i] || "");
       const plant = normalizePlant(obj);
-      if(plant.name){
-        plants.push(plant);
-        count++;
-      }
+      if(plant.name){ plants.push(plant); count++; }
     }
 
     savePlants();
     clearFilePicker();
-    renderSearch();
+    clearSearch();
     alert(`Imported ${count} plants.`);
   };
   reader.readAsText(file);
 }
 
 function clearFilePicker(){
-  const oldInput = document.getElementById('csvFile');
-  oldInput.value = "";
+  document.getElementById('csvFile').value = "";
 }
 
 function csvEscape(value){
   const s = String(value || "");
-  if(/[",\n\r]/.test(s)){
-    return '"' + s.replace(/"/g, '""') + '"';
-  }
+  if(/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
   return s;
 }
 
 function exportBackup(){
-  const headers = [
-    "Plant Name",
-    "Botanical Name",
-    "Botanical Pronunciation",
-    "Category",
-    "Location",
-    "Price",
-    "Light",
-    "Size",
-    "Evergreen",
-    "Notes",
-    "Aliases"
-  ];
-
+  const headers = ["Plant Name","Botanical Name","Botanical Pronunciation","Category","Location","Price","Light","Size","Evergreen","Notes","Aliases"];
   const lines = [headers.join(",")];
 
   plants.map(normalizePlant).forEach(p => {
-    lines.push([
-      p.name,
-      p.botanical,
-      p.pronunciation,
-      p.category,
-      p.location,
-      p.price,
-      p.light,
-      p.size,
-      p.evergreen,
-      p.notes,
-      p.aliases
-    ].map(csvEscape).join(","));
+    lines.push([p.name,p.botanical,p.pronunciation,p.category,p.location,p.price,p.light,p.size,p.evergreen,p.notes,p.aliases].map(csvEscape).join(","));
   });
 
   const blob = new Blob([lines.join("\n")], {type:"text/csv"});
@@ -646,7 +408,7 @@ function exportBackup(){
   URL.revokeObjectURL(url);
 }
 
-renderSearch();
+clearSearch();
 </script>
 
 </body>
