@@ -121,6 +121,7 @@
     <button onclick="importCSV()">Import CSV</button>
     <button class="light" onclick="clearFilePicker()">Clear Import File</button>
     <button class="secondary" onclick="exportBackup()">Export Backup CSV</button>
+    <button class="danger" onclick="wipeAllData()">Nuclear Reset: Delete All Data</button>
   </div>
 
 </div>
@@ -352,6 +353,15 @@ function parseCSV(text){
   return rows;
 }
 
+function plantKey(p){
+  p = normalizePlant(p);
+  return [
+    p.name.trim().toLowerCase(),
+    p.location.trim().toLowerCase(),
+    p.botanical.trim().toLowerCase()
+  ].join("|");
+}
+
 function importCSV(){
   const fileInput = document.getElementById('csvFile');
   const file = fileInput.files[0];
@@ -363,20 +373,49 @@ function importCSV(){
     if(rows.length < 2){ alert("CSV appears empty or missing rows."); return; }
 
     const headers = rows[0].map(h => h.trim());
-    let count = 0;
+    let imported = 0;
+    let skipped = 0;
+
+    const existingKeys = new Set(plants.map(p => plantKey(p)));
+
     for(let r=1; r<rows.length; r++){
       const obj = {};
       headers.forEach((h, i) => obj[h] = rows[r][i] || "");
       const plant = normalizePlant(obj);
-      if(plant.name){ plants.push(plant); count++; }
+
+      if(plant.name){
+        const key = plantKey(plant);
+        if(existingKeys.has(key)){
+          skipped++;
+        } else {
+          plants.push(plant);
+          existingKeys.add(key);
+          imported++;
+        }
+      }
     }
 
     savePlants();
     clearFilePicker();
     clearSearch();
-    alert(`Imported ${count} plants.`);
+    alert(`Imported ${imported} new plants. Skipped ${skipped} duplicates.`);
   };
   reader.readAsText(file);
+}
+
+function wipeAllData(){
+  const first = confirm("This will permanently delete ALL saved plant records from this device/browser. Export a backup first if you want to keep them. Continue?");
+  if(!first) return;
+
+  const second = confirm("Final warning: delete every saved plant record now?");
+  if(!second) return;
+
+  plants = [];
+  localStorage.removeItem('alsPlants');
+  clearSearch();
+  clearForm();
+  updateDatabaseCount();
+  alert("All plant data has been deleted from this device/browser.");
 }
 
 function clearFilePicker(){
