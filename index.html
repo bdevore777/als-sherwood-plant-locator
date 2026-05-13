@@ -119,6 +119,7 @@
     <p class="small-note">Import CSV files made from plant tags. Export backup often so you do not lose phone data.</p>
     <input type="file" id="csvFile" accept=".csv,text/csv" />
     <button onclick="importCSV()">Import CSV</button>
+    <button class="secondary" onclick="undoLastImport()">Undo Last Import</button>
     <button class="light" onclick="clearFilePicker()">Clear Import File</button>
     <button class="secondary" onclick="exportBackup()">Export Backup CSV</button>
     <button class="danger" onclick="wipeAllData()">Nuclear Reset: Delete All Data</button>
@@ -127,7 +128,18 @@
 </div>
 
 <script>
-let plants = JSON.parse(localStorage.getItem('alsPlants') || '[]');
+function safeLoadPlants(){
+  try {
+    const raw = localStorage.getItem('alsPlants');
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch(e) {
+    alert("Saved plant data could not be read. Export backups regularly. The app will open with an empty working list until storage is fixed.");
+    return [];
+  }
+}
+
+let plants = safeLoadPlants();
 let editingIndex = null;
 
 const fields = {
@@ -144,8 +156,13 @@ const fields = {
   notes: document.getElementById('notes')
 };
 
+function makeId(){
+  return 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,10);
+}
+
 function normalizePlant(p){
   return {
+    id: p.id || p["ID"] || makeId(),
     name: p.name || p["Plant Name"] || p["Name"] || "",
     category: p.category || p["Category"] || "Other",
     botanical: p.botanical || p["Botanical Name"] || "",
@@ -160,6 +177,17 @@ function normalizePlant(p){
   };
 }
 
+function normalizeText(value){
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[’‘`´]/g, "'")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
 plants = plants.map(normalizePlant);
 savePlants();
 updateDatabaseCount();
@@ -169,6 +197,11 @@ function savePlants(){
   updateDatabaseCount();
 }
 
+function saveLastImportIds(ids){
+  lastImportIds = ids || [];
+  localStorage.setItem('alsLastImportIds', JSON.stringify(lastImportIds));
+}
+
 function updateDatabaseCount(){
   const el = document.getElementById('databaseCount');
   if(el) el.textContent = `${plants.length} saved plants. Search above to show results.`;
@@ -176,11 +209,12 @@ function updateDatabaseCount(){
 
 function plantSearchText(p){
   p = normalizePlant(p);
-  return [p.name,p.category,p.botanical,p.pronunciation,p.location,p.price,p.light,p.size,p.evergreen,p.aliases,p.notes].join(" ").toLowerCase();
+  return normalizeText([p.name,p.category,p.botanical,p.pronunciation,p.location,p.price,p.light,p.size,p.evergreen,p.aliases,p.notes].join(" "));
 }
 
 function savePlant(){
   const plant = {
+    id: editingIndex !== null ? normalizePlant(plants[editingIndex]).id : makeId(),
     name: fields.name.value.trim(),
     category: fields.category.value.trim(),
     botanical: fields.botanical.value.trim(),
@@ -273,7 +307,7 @@ function renderCard(p, index){
 }
 
 function getMatches(query){
-  const q = query.trim().toLowerCase();
+  const q = normalizeText(query);
   if(!q) return [];
   return plants.map((p, i) => ({p: normalizePlant(p), i})).filter(item => plantSearchText(item.p).includes(q));
 }
@@ -308,7 +342,7 @@ function renderSuggestions(q, matches){
   }
 
   suggestions.innerHTML = matches.slice(0,8).map(item => `
-    <div class="suggestion" onclick="chooseSuggestion('${encodeURIComponent(item.p.name)}')">
+    <div class="suggestion" onclick="chooseSuggestionByIndex(${item.i})">
       <strong>${escapeHTML(item.p.name)}</strong>
       ${item.p.location ? `<span class="muted"> — ${escapeHTML(item.p.location)}</span>` : ""}
     </div>
@@ -316,10 +350,17 @@ function renderSuggestions(q, matches){
   suggestions.style.display = "block";
 }
 
-function chooseSuggestion(encodedName){
-  document.getElementById('quickSearch').value = decodeURIComponent(encodedName);
+function chooseSuggestionByIndex(index){
+  const plant = normalizePlant(plants[index]);
+  document.getElementById('quickSearch').value = plant.name;
   document.getElementById('suggestions').style.display = "none";
-  renderSearch();
+
+  const results = document.getElementById('results');
+  const header = document.getElementById('resultsHeader');
+
+  header.style.display = "block";
+  header.textContent = "Your Results (1)";
+  results.innerHTML = renderCard(plant, index);
 }
 
 function clearSearch(){
@@ -356,9 +397,9 @@ function parseCSV(text){
 function plantKey(p){
   p = normalizePlant(p);
   return [
-    p.name.trim().toLowerCase(),
-    p.location.trim().toLowerCase(),
-    p.botanical.trim().toLowerCase()
+    normalizeText(p.name),
+    normalizeText(p.location),
+    normalizeText(p.botanical)
   ].join("|");
 }
 
@@ -372,9 +413,10 @@ function importCSV(){
     const rows = parseCSV(e.target.result);
     if(rows.length < 2){ alert("CSV appears empty or missing rows."); return; }
 
-    const headers = rows[0].map(h => h.trim());
+    const headers = rows[0].map(h => String(h || "").replace(/^\uFEFF/, "").trim());
     let imported = 0;
     let skipped = 0;
+    const importedIds = [];
 
     const existingKeys = new Set(plants.map(p => plantKey(p)));
 
@@ -384,38 +426,47 @@ function importCSV(){
       const plant = normalizePlant(obj);
 
       if(plant.name){
+        plant.id = makeId();
         const key = plantKey(plant);
         if(existingKeys.has(key)){
           skipped++;
         } else {
           plants.push(plant);
           existingKeys.add(key);
+          importedIds.push(plant.id);
           imported++;
         }
       }
     }
 
     savePlants();
+    saveLastImportIds(importedIds);
     clearFilePicker();
     clearSearch();
-    alert(`Imported ${imported} new plants. Skipped ${skipped} duplicates.`);
+    alert(`Imported ${imported} new plants. Skipped ${skipped} duplicates. ${imported ? "You can undo this import if needed." : ""}`);
   };
   reader.readAsText(file);
 }
 
-function wipeAllData(){
-  const first = confirm("This will permanently delete ALL saved plant records from this device/browser. Export a backup first if you want to keep them. Continue?");
-  if(!first) return;
+function undoLastImport(){
+  if(!lastImportIds || !lastImportIds.length){
+    alert("There is no recent import batch to undo.");
+    return;
+  }
 
-  const second = confirm("Final warning: delete every saved plant record now?");
-  if(!second) return;
+  const count = lastImportIds.length;
+  const ok = confirm(`Undo the last import and remove ${count} plant record(s)? This will not remove manually entered plants or earlier imports.`);
+  if(!ok) return;
 
-  plants = [];
-  localStorage.removeItem('alsPlants');
+  const idSet = new Set(lastImportIds);
+  const before = plants.length;
+  plants = plants.filter(p => !idSet.has(normalizePlant(p).id));
+  const removed = before - plants.length;
+
+  savePlants();
+  saveLastImportIds([]);
   clearSearch();
-  clearForm();
-  updateDatabaseCount();
-  alert("All plant data has been deleted from this device/browser.");
+  alert(`Removed ${removed} plant record(s) from the last import.`);
 }
 
 function clearFilePicker(){
@@ -429,14 +480,14 @@ function csvEscape(value){
 }
 
 function exportBackup(){
-  const headers = ["Plant Name","Botanical Name","Botanical Pronunciation","Category","Location","Price","Light","Size","Evergreen","Notes","Aliases"];
+  const headers = ["ID","Plant Name","Botanical Name","Botanical Pronunciation","Category","Location","Price","Light","Size","Evergreen","Notes","Aliases"];
   const lines = [headers.join(",")];
 
   plants.map(normalizePlant).forEach(p => {
-    lines.push([p.name,p.botanical,p.pronunciation,p.category,p.location,p.price,p.light,p.size,p.evergreen,p.notes,p.aliases].map(csvEscape).join(","));
+    lines.push([p.id,p.name,p.botanical,p.pronunciation,p.category,p.location,p.price,p.light,p.size,p.evergreen,p.notes,p.aliases].map(csvEscape).join(","));
   });
 
-  const blob = new Blob([lines.join("\n")], {type:"text/csv"});
+  const blob = new Blob(['\uFEFF' + lines.join("\n")], {type:"text/csv;charset=utf-8"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
