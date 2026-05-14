@@ -50,6 +50,43 @@
   @media(min-width:700px){.grid.two{grid-template-columns:1fr 1fr;}}
   .small-note{font-size:13px;color:#5e6b61;}
   .count-pill{display:inline-block;background:#eaf2e8;border:1px solid var(--line);padding:5px 9px;border-radius:999px;font-size:13px;margin-top:6px;}
+
+.filter-group{
+  margin:12px 0;
+}
+.filter-label{
+  font-size:13px;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  font-weight:bold;
+  color:#49624f;
+  margin-bottom:6px;
+}
+.filter-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.filter-row .filter-btn{
+  padding:12px 13px;
+  min-height:44px;
+  font-size:15px;
+}
+.find-buttons{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:4px;
+}
+.find-buttons button{
+  min-height:44px;
+}
+
+.filter-btn.active-filter{
+  background:#2f7d3c;
+  color:white;
+  border:1px solid #2f7d3c;
+}
 </style>
 </head>
 <body>
@@ -71,6 +108,69 @@
     <div id="databaseCount" class="count-pill"></div>
     <div id="resultsHeader" class="results-header">Your Results</div>
     <div id="results"></div>
+  </div>
+
+  <div class="section">
+    <h2>Find by Customer Need</h2>
+    <p class="small-note">Tap traits to find recommendation ideas for customers. Works from your saved notes, aliases, categories, light, size, and locations.</p>
+
+    <div id="filterButtons">
+
+      <div class="filter-group">
+        <div class="filter-label">Type</div>
+        <div class="filter-row">
+          <button class="light filter-btn" data-filter="annual">Annual</button>
+          <button class="light filter-btn" data-filter="perennial">Perennial</button>
+          <button class="light filter-btn" data-filter="shrub">Shrub</button>
+          <button class="light filter-btn" data-filter="tree">Tree</button>
+          <button class="light filter-btn" data-filter="houseplant">Houseplant</button>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-label">Light</div>
+        <div class="filter-row">
+          <button class="light filter-btn" data-filter="sun">Sun</button>
+          <button class="light filter-btn" data-filter="part shade">Part Shade</button>
+          <button class="light filter-btn" data-filter="shade">Shade</button>
+          <button class="light filter-btn" data-filter="dry shade">Dry Shade</button>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-label">Customer Need</div>
+        <div class="filter-row">
+          <button class="light filter-btn" data-filter="trailing">Trailing</button>
+          <button class="light filter-btn" data-filter="groundcover">Groundcover</button>
+          <button class="light filter-btn" data-filter="container">Container</button>
+          <button class="light filter-btn" data-filter="privacy">Privacy</button>
+          <button class="light filter-btn" data-filter="medium height">Medium Height</button>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-label">Popular Traits</div>
+        <div class="filter-row">
+          <button class="light filter-btn" data-filter="low maintenance">Low Maintenance</button>
+          <button class="light filter-btn" data-filter="fast growing">Fast Growing</button>
+          <button class="light filter-btn" data-filter="long blooming">Long Blooming</button>
+          <button class="light filter-btn" data-filter="fragrant">Fragrant</button>
+          <button class="light filter-btn" data-filter="native">Native</button>
+          <button class="light filter-btn" data-filter="pollinator">Pollinator</button>
+        </div>
+      </div>
+
+    </div>
+
+    <input id="customerKeyword" placeholder="Optional keyword: blue flowers, dry shade, privacy, basket, not too tall..." />
+
+    <div class="find-buttons">
+      <button onclick="findCustomerMatches()">Find Matches</button>
+      <button class="secondary" onclick="clearCustomerFilters()">Clear Filters</button>
+    </div>
+
+    <div id="customerResultsHeader" class="results-header" style="display:none;"></div>
+    <div id="customerResults"></div>
   </div>
 
   <div class="section">
@@ -497,6 +597,165 @@ function exportBackup(){
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+let activeFilters = [];
+
+function setupCustomerFilterButtons(){
+
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+
+    if(btn.dataset.bound === 'true') return;
+
+    btn.dataset.bound = 'true';
+
+    btn.addEventListener('click', () => {
+
+      const filter = (btn.dataset.filter || '').toLowerCase().trim();
+
+      if(activeFilters.includes(filter)){
+
+        activeFilters = activeFilters.filter(f => f !== filter);
+
+        btn.classList.remove('active-filter');
+
+      } else {
+
+        activeFilters.push(filter);
+
+        btn.classList.add('active-filter');
+
+      }
+
+    });
+
+  });
+
+}
+
+function customerSearchText(p){
+
+  p = normalizePlant(p);
+
+  let text = [
+    p.name || '',
+    p.category || '',
+    p.location || '',
+    p.light || '',
+    p.size || '',
+    p.evergreen || '',
+    p.botanical || '',
+    p.notes || '',
+    p.aliases || ''
+  ].join(' ').toLowerCase();
+
+  const addIf = (signals, words) => {
+    if(signals.some(signal => text.includes(signal))){
+      text += ' ' + words + ' ';
+    }
+  };
+
+  addIf(
+    ['18-24', '18 in', '24 in', '2 ft', '2-3 ft', '3 ft', '3-4 ft', '4 ft',
+     'medium', 'mid height', 'mid-height', 'behind shorter', 'backdrop',
+     'border perennial', 'middle of border', 'mounding', 'upright'],
+    'medium height mid height middle height behind shorter plant not too tall'
+  );
+
+  addIf(
+    ['easy', 'tough', 'reliable', 'drought tolerant', 'once established', 'low water',
+     'deer resistant', 'evergreen', 'hardy', 'good drainage'],
+    'low maintenance easy care'
+  );
+
+  addIf(
+    ['spreading', 'quick', 'fast', 'vigorous', 'screening', 'privacy', 'large shrub'],
+    'fast growing'
+  );
+
+  addIf(
+    ['long blooming', 'repeat blooms', 'deadheading', 'blooms', 'flowers all summer',
+     'long bloom', 'extended bloom'],
+    'long blooming'
+  );
+
+  addIf(
+    ['fragrant', 'scent', 'lavender', 'rosemary'],
+    'fragrant'
+  );
+
+  addIf(
+    ['spiller', 'trailing', 'cascading', 'over walls', 'hanging basket'],
+    'trailing hanging basket'
+  );
+
+  addIf(
+    ['container', 'pot', 'thriller', 'spiller'],
+    'container'
+  );
+
+  addIf(
+    ['screen', 'screening', 'privacy', 'hedge'],
+    'privacy'
+  );
+
+  addIf(
+    ['pnw native', 'pacific northwest native', 'oregon native', 'native shrub',
+     'native perennial', 'west coast native', 'native to'],
+    'native'
+  );
+
+  return text;
+
+}
+
+function findCustomerMatches(){
+  const keywordEl = document.getElementById('customerKeyword');
+  const keyword = keywordEl ? keywordEl.value.toLowerCase().trim() : "";
+  const results = document.getElementById('customerResults');
+  const header = document.getElementById('customerResultsHeader');
+
+  let matches = plants
+    .map((p,i)=>({p:normalizePlant(p),i}))
+    .filter(item => {
+      const text = customerSearchText(item.p);
+      const filterMatch = activeFilters.every(f => text.includes(f));
+      const keywordMatch = !keyword || text.includes(keyword);
+      return filterMatch && keywordMatch;
+    });
+
+  header.style.display='block';
+
+  if(!activeFilters.length && !keyword){
+    header.textContent = 'Choose at least one trait or keyword.';
+    results.innerHTML = '';
+    return;
+  }
+
+  header.textContent = matches.length
+    ? `Recommendations (${matches.length})`
+    : 'No recommendations found';
+
+  results.innerHTML = matches
+    .slice(0,10)
+    .map(item => renderCard(item.p,item.i))
+    .join('');
+}
+
+function clearCustomerFilters(){
+  activeFilters = [];
+
+  const keywordEl = document.getElementById('customerKeyword');
+  if(keywordEl) keywordEl.value='';
+
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.classList.remove('active-filter');
+  });
+
+  document.getElementById('customerResults').innerHTML='';
+  document.getElementById('customerResultsHeader').style.display='none';
+}
+
+setupCustomerFilterButtons();
 
 clearSearch();
 </script>
