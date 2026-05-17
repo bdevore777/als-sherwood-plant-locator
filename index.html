@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ALS Sherwood Plant Locator v20</title>
+<title>ALS Sherwood Plant Locator v21</title>
 <style>
   :root{
     --green:#1f5c2d;
@@ -119,7 +119,7 @@
 
 <header>
   <h1>ALS Sherwood Plant Locator</h1>
-  <p>Fast plant lookup, table locations, customer notes, and safer CSV updates</p>
+  <p>Fast plant lookup, exact location browsing, customer notes, and safer CSV updates</p>
 </header>
 
 <div class="container">
@@ -134,6 +134,31 @@
     <div id="databaseCount" class="count-pill"></div>
     <div id="resultsHeader" class="results-header">Your Results</div>
     <div id="results"></div>
+  </div>
+
+  <div class="section" id="locationManagerSection">
+    <h2>Browse by Location / Section</h2>
+    <p class="small-note">Choose an exact table or named section to audit plants in that area. Rename Location updates the actual plant cards assigned to that location.</p>
+
+    <div class="grid two">
+      <div>
+        <label class="small-note">Location / Section</label>
+        <select id="locationBrowser"></select>
+      </div>
+      <div>
+        <label class="small-note">New Location Name</label>
+        <input id="newLocationName" placeholder="Example: Grasses, Premium Annuals Table 3" />
+      </div>
+    </div>
+
+    <div class="find-buttons">
+      <button onclick="browseLocation()">Show Location Plants</button>
+      <button onclick="renameLocation()">Rename Location</button>
+      <button class="secondary" onclick="addLocationOnly()">Add New Location</button>
+      <button class="light" onclick="clearLocationBrowse()">Clear Location Results</button>
+    </div>
+
+    <div class="warning-note">Renaming a location changes every plant record currently assigned to that location. Export a backup first if you are making major location changes.</div>
   </div>
 
   <div class="section">
@@ -242,7 +267,7 @@
     <div id="customerResults"></div>
   </div>
 
-  <div class="section">
+  <div class="section" id="plantFormSection">
     <h2>Add / Update Plant</h2>
     <div class="grid two">
       <input id="name" placeholder="Plant Name" />
@@ -378,6 +403,7 @@ updateDatabaseCount();
 function savePlants(){
   localStorage.setItem('alsPlants', JSON.stringify(plants));
   updateDatabaseCount();
+  refreshLocationDropdown();
 }
 
 function saveLastImportIds(ids){
@@ -476,7 +502,7 @@ function editPlant(index){
   fields.aliases.value = p.aliases;
   fields.notes.value = p.notes;
   editingIndex = index;
-  document.querySelectorAll(".section")[2].scrollIntoView({behavior:"smooth"});
+  document.getElementById("plantFormSection").scrollIntoView({behavior:"smooth"});
 }
 
 function deletePlant(index){
@@ -517,7 +543,16 @@ function renderCard(p, index){
 function getMatches(query){
   const q = normalizeText(query);
   if(!q) return [];
-  return plants.map((p, i) => ({p: normalizePlant(p), i})).filter(item => plantSearchText(item.p).includes(q));
+
+  // Exact table/location search: "table 3" should NOT match Table 35, 36, 37, etc.
+  const tableMatch = q.match(/^table\s+(\d+)$/i);
+
+  return plants.map((p, i) => ({p: normalizePlant(p), i})).filter(item => {
+    if(tableMatch){
+      return normalizeText(item.p.location) === q;
+    }
+    return plantSearchText(item.p).includes(q);
+  });
 }
 
 function renderSearch(){
@@ -855,6 +890,8 @@ function wipeAllData(){
   if(!ok2) return;
 
   plants = [];
+  customLocations = [];
+  saveCustomLocations();
   editingIndex = null;
   saveLastImportIds([]);
   savePlants();
@@ -862,6 +899,163 @@ function wipeAllData(){
   clearSearch();
   clearCustomerFilters();
   alert("All local plant records have been deleted from this browser.");
+}
+
+
+let customLocations = [];
+try {
+  customLocations = JSON.parse(localStorage.getItem('alsCustomLocations') || '[]');
+  if(!Array.isArray(customLocations)) customLocations = [];
+} catch(e) {
+  customLocations = [];
+}
+
+function saveCustomLocations(){
+  localStorage.setItem('alsCustomLocations', JSON.stringify(customLocations));
+}
+
+function getAllLocations(){
+  const extraLocations = (typeof customLocations !== 'undefined' && Array.isArray(customLocations)) ? customLocations : [];
+  const plantLocations = plants
+    .map(p => normalizePlant(p).location || '')
+    .map(l => l.trim())
+    .filter(Boolean);
+
+  const seen = new Set();
+  const out = [];
+
+  [...plantLocations, ...extraLocations].forEach(loc => {
+    const clean = String(loc || '').trim();
+    const key = normalizeText(clean);
+    if(clean && !seen.has(key)){
+      seen.add(key);
+      out.push(clean);
+    }
+  });
+
+  return out.sort((a,b)=>a.localeCompare(b, undefined, {numeric:true, sensitivity:'base'}));
+}
+
+function refreshLocationDropdown(){
+  const select = document.getElementById('locationBrowser');
+  if(!select) return;
+
+  const current = select.value;
+  const locations = getAllLocations();
+
+  if(!locations.length){
+    select.innerHTML = '<option value="">No locations yet</option>';
+    return;
+  }
+
+  select.innerHTML = locations.map(loc =>
+    `<option value="${escapeHTML(loc)}">${escapeHTML(loc)}</option>`
+  ).join('');
+
+  if(current && locations.some(loc => loc === current)){
+    select.value = current;
+  }
+}
+
+function browseLocation(){
+  const select = document.getElementById('locationBrowser');
+  const location = select ? select.value : '';
+
+  if(!location){
+    alert('Choose a location first.');
+    return;
+  }
+
+  const results = plants
+    .map((p,i)=>({p:normalizePlant(p),i}))
+    .filter(item => item.p.location === location);
+
+  const resultsDiv = document.getElementById('results');
+  const header = document.getElementById('resultsHeader');
+  const quickSearch = document.getElementById('quickSearch');
+  const suggestions = document.getElementById('suggestions');
+
+  if(quickSearch) quickSearch.value = '';
+  if(suggestions){
+    suggestions.innerHTML = '';
+    suggestions.style.display = 'none';
+  }
+
+  header.style.display = 'block';
+  header.textContent = `${location} (${results.length})`;
+
+  resultsDiv.innerHTML = results.length
+    ? results.map(item => renderCard(item.p,item.i)).join('')
+    : '<div class="card">No plants assigned to this location yet.</div>';
+}
+
+function renameLocation(){
+  const select = document.getElementById('locationBrowser');
+  const oldLocation = select ? select.value : '';
+  const newLocation = document.getElementById('newLocationName').value.trim();
+
+  if(!oldLocation){
+    alert('Select an existing location first.');
+    return;
+  }
+
+  if(!newLocation){
+    alert('Enter the new location name.');
+    return;
+  }
+
+  if(normalizeText(oldLocation) === normalizeText(newLocation)){
+    alert('The new location name is the same as the old one.');
+    return;
+  }
+
+  const count = plants.map(normalizePlant).filter(p => p.location === oldLocation).length;
+  const ok = confirm(`Rename "${oldLocation}" to "${newLocation}" for ${count} plant record(s)?`);
+  if(!ok) return;
+
+  plants = plants.map(p => {
+    p = normalizePlant(p);
+    if(p.location === oldLocation){
+      p.location = newLocation;
+    }
+    return p;
+  });
+
+  customLocations = customLocations.filter(loc => normalizeText(loc) !== normalizeText(oldLocation));
+  if(!customLocations.some(loc => normalizeText(loc) === normalizeText(newLocation))){
+    customLocations.push(newLocation);
+  }
+
+  saveCustomLocations();
+  savePlants();
+  refreshLocationDropdown();
+  document.getElementById('locationBrowser').value = newLocation;
+  document.getElementById('newLocationName').value = '';
+  browseLocation();
+  alert(`Updated ${count} plant record(s).`);
+}
+
+function addLocationOnly(){
+  const newLocation = document.getElementById('newLocationName').value.trim();
+
+  if(!newLocation){
+    alert('Enter a location name first.');
+    return;
+  }
+
+  if(!customLocations.some(loc => normalizeText(loc) === normalizeText(newLocation))){
+    customLocations.push(newLocation);
+    saveCustomLocations();
+  }
+
+  refreshLocationDropdown();
+  document.getElementById('locationBrowser').value = newLocation;
+  document.getElementById('newLocationName').value = '';
+  alert('Location added to dropdown. Assign plants to it by editing cards or using Rename Location.');
+}
+
+function clearLocationBrowse(){
+  clearSearch();
 }
 
 let activeFilters = [];
@@ -1116,6 +1310,7 @@ function clearCustomerFilters(){
 }
 
 setupCustomerFilterButtons();
+refreshLocationDropdown();
 
 clearSearch();
 </script>
