@@ -1152,11 +1152,11 @@ function estimateMaxHeightInches(sizeText){
   return max;
 }
 
+
 function customerSearchText(p){
-
+  // General free-text search field used for optional keyword matching only.
   p = normalizePlant(p);
-
-  let text = normalizeText([
+  return normalizeText([
     p.name || '',
     p.category || '',
     p.location || '',
@@ -1164,133 +1164,119 @@ function customerSearchText(p){
     p.size || '',
     p.evergreen || '',
     p.botanical || '',
-    p.notes || '',
-    p.aliases || ''
+    p.aliases || '',
+    p.notes || ''
   ].join(' '));
-
-  const addIf = (signals, words) => {
-    const normSignals = signals.map(normalizeText);
-    if(normSignals.some(signal => text.includes(signal))){
-      text += ' ' + normalizeText(words) + ' ';
-    }
-  };
-
-  const maxHeight = estimateMaxHeightInches(p.size);
-  if(maxHeight !== null){
-    if(maxHeight <= 8){
-      text += ' groundcover low front spreading filler under 1 ft '; 
-    } else if(maxHeight <= 18){
-      text += ' low front front border low mounding compact under 18 inches '; 
-    } else if(maxHeight <= 30){
-      text += ' small compact mounding front border under 2 ft container '; 
-    } else if(maxHeight <= 48){
-      text += ' medium height mid height middle of border 2 4 ft '; 
-    } else if(maxHeight <= 72){
-      text += ' tall upright back of border 4 6 ft privacy '; 
-    } else {
-      text += ' very tall tall upright privacy screening back of border 6 ft plus '; 
-    }
-  }
-
-  addIf(['sun', 'full sun', 'sunny'], 'sun full sun');
-  addIf(['part shade', 'partial shade', 'morning sun', 'afternoon shade'], 'part shade partial shade');
-  addIf(['shade', 'woodland'], 'shade');
-  addIf(['dry shade', 'under trees', 'tree roots', 'root competition'], 'dry shade shade low water');
-
-  addIf(['creeping', 'mat forming', 'mat-forming', 'carpet', 'ground cover', 'groundcover', 'edging'], 'groundcover spreading low front');
-  addIf(['mounding', 'rounded', 'compact mound', 'neat mound', 'clumping'], 'mounding compact low front');
-  addIf(['spreading', 'fills in', 'filler', 'vigorous'], 'spreading filler');
-  addIf(['spiller', 'trailing', 'cascading', 'over walls', 'hanging basket'], 'trailing spiller hanging basket container');
-  addIf(['upright', 'vertical', 'spike', 'spikes', 'columnar', 'narrow', 'slender'], 'upright tall upright narrow');
-  addIf(['narrow space', 'narrow spot', 'tight space', 'columnar'], 'narrow');
-  addIf(['screen', 'screening', 'privacy', 'hedge', 'large shrub'], 'privacy tall upright');
-
-  addIf(['yellow', 'gold', 'golden', 'cream yellow'], 'yellow flowers');
-  addIf(['purple', 'violet', 'mauve', 'lavender flowers'], 'purple flowers');
-  addIf(['blue', 'sapphire'], 'blue flowers');
-  addIf(['white', 'cream flowers'], 'white flowers');
-  addIf(['pink', 'rose'], 'pink flowers');
-  addIf(['red', 'burgundy', 'crimson'], 'red flowers');
-  addIf(['orange', 'coral', 'apricot', 'peach'], 'orange flowers');
-
-  addIf(['spring bloom', 'blooms in spring', 'early season'], 'spring bloom');
-  addIf(['summer bloom', 'all summer', 'flowers all summer', 'long blooming', 'repeat blooms', 'rebloom', 'deadheading', 'extended bloom'], 'summer bloom long blooming');
-  addIf(['fall color', 'autumn color', 'late season', 'fall bloom'], 'fall color');
-  addIf(['winter interest', 'evergreen', 'semi evergreen', 'semi-evergreen'], 'winter interest evergreen');
-
-  addIf(['pollinator', 'bee', 'bees', 'butterfly', 'butterflies'], 'pollinator butterfly');
-  addIf(['hummingbird', 'hummingbirds', 'salvia', 'penstemon', 'fuchsia', 'agastache'], 'hummingbird pollinator');
-  addIf(['bird', 'birds', 'berries', 'seed heads'], 'bird friendly');
-  addIf(['deer resistant', 'deer resistant', 'lavender', 'sage', 'salvia', 'yarrow', 'nepeta'], 'deer resistant');
-
-  addIf(['drought tolerant', 'low water', 'dry', 'once established', 'xeric', 'mediterranean', 'good drainage'], 'low water drought tolerant low maintenance');
-  addIf(['moist', 'wet', 'bog', 'rush', 'juncus', 'astilbe', 'ligularia'], 'moist soil moderate water');
-  addIf(['moderate water', 'regular water', 'average moisture'], 'moderate water');
-  addIf(['easy', 'tough', 'reliable', 'hardy', 'low maintenance'], 'low maintenance easy care');
-  addIf(['container', 'pot', 'thriller', 'spiller', 'compact'], 'container');
-  addIf(['fragrant', 'scent', 'lavender', 'rosemary', 'wallflower'], 'fragrant');
-  addIf(['pnw native', 'pacific northwest native', 'oregon native', 'native shrub', 'native perennial', 'west coast native', 'native to'], 'native');
-
-  return text;
-
 }
 
+function exactContains(text, term){
+  text = normalizeText(text);
+  term = normalizeText(term);
+  if(!term) return false;
+  return (` ${text} `).includes(` ${term} `);
+}
 
-function matchesTrueShade(p, searchText){
+function filterBlob(p){
   p = normalizePlant(p);
-  const light = normalizeText(p.light);
-  const notesAliases = normalizeText([p.notes || '', p.aliases || ''].join(' '));
+  return normalizeText([p.name, p.botanical, p.aliases, p.notes, p.size, p.location].join(' '));
+}
 
-  if(light === 'shade') return true;
-  if(light.includes('part shade to shade') || light.includes('shade to part shade')) return true;
-  if(notesAliases.includes('dry shade') || notesAliases.includes('woodland shade') || notesAliases.includes('deep shade')) return true;
+function matchesTypeFilter(p, filter){
+  p = normalizePlant(p);
+  const cat = normalizeText(p.category);
+  const blob = filterBlob(p);
 
+  if(filter === 'annual') return cat.includes('annual');
+  if(filter === 'perennial') return cat.includes('perennial');
+  if(filter === 'shrub') return cat.includes('shrub');
+  if(filter === 'tree') return cat.includes('tree');
+  if(filter === 'edible') return cat.includes('edible') || cat.includes('vegetable') || cat.includes('fruit') || cat.includes('herb') || exactContains(blob,'edible');
+  if(filter === 'houseplant') return cat.includes('houseplant') || cat.includes('indoor') || exactContains(blob,'houseplant');
   return false;
 }
 
-function matchesPartShade(p, searchText){
+function matchesLightFilter(p, filter){
   p = normalizePlant(p);
   const light = normalizeText(p.light);
-  if(light.includes('part shade') || light.includes('partial shade')) return true;
-  return searchText.includes('part shade');
+  const blob = filterBlob(p);
+
+  if(filter === 'sun'){
+    return light.includes('sun');
+  }
+  if(filter === 'part shade'){
+    return light.includes('part shade') || light.includes('partial shade') || blob.includes('morning sun afternoon shade');
+  }
+  if(filter === 'shade'){
+    // Shade button means actual shade-tolerant, based primarily on Light field.
+    return light.includes('shade') || blob.includes('woodland shade') || blob.includes('dry shade');
+  }
+  if(filter === 'dry shade'){
+    return blob.includes('dry shade') || blob.includes('under trees') || blob.includes('tree roots');
+  }
+  return false;
 }
 
-function filterSynonyms(filter){
+function matchesSeasonFilter(p, filter){
+  p = normalizePlant(p);
+  const blob = filterBlob(p);
+  const evergreen = normalizeText(p.evergreen);
+
+  if(filter === 'spring bloom') return blob.includes('spring bloom') || blob.includes('blooms in spring') || blob.includes('early season');
+  if(filter === 'summer bloom') return blob.includes('summer bloom') || blob.includes('all summer') || blob.includes('flowers all summer');
+  if(filter === 'fall color') return blob.includes('fall color') || blob.includes('autumn color') || blob.includes('fall bloom');
+  if(filter === 'winter interest') return blob.includes('winter interest') || evergreen.includes('evergreen') || blob.includes('evergreen foliage');
+  if(filter === 'evergreen') return evergreen.includes('yes') || evergreen.includes('evergreen') || blob.includes('evergreen');
+  if(filter === 'long blooming') return blob.includes('long blooming') || blob.includes('long bloom') || blob.includes('repeat bloom') || blob.includes('rebloom') || blob.includes('nonstop') || blob.includes('all summer');
+  return false;
+}
+
+function estimateMaxHeightInches(sizeText){
+  const s = String(sizeText || '').toLowerCase();
+  if(!s.trim()) return null;
+  const matches = [...s.matchAll(/(\d+(?:\.\d+)?)\s*(?:-|–|to|x|×)?\s*(\d+(?:\.\d+)?)?\s*(ft|feet|foot|in|inch|inches|")/g)];
+  if(!matches.length) return null;
+  let max = null;
+  matches.forEach(m => {
+    const a = parseFloat(m[1]);
+    const b = m[2] ? parseFloat(m[2]) : a;
+    const unit = m[3];
+    let val = Math.max(a, b);
+    if(unit.startsWith('ft') || unit === 'feet' || unit === 'foot') val *= 12;
+    if(max === null || val > max) max = val;
+  });
+  return max;
+}
+
+function matchesSizeShapeFilter(p, filter){
+  p = normalizePlant(p);
+  const blob = filterBlob(p);
+  const maxHeight = estimateMaxHeightInches(p.size);
+
+  if(filter === 'groundcover') return blob.includes('groundcover') || blob.includes('ground cover') || blob.includes('creeping') || blob.includes('mat forming');
+  if(filter === 'low front') return blob.includes('low front') || blob.includes('front border') || blob.includes('edging') || (maxHeight !== null && maxHeight <= 18);
+  if(filter === 'mounding') return blob.includes('mounding') || blob.includes('mound') || blob.includes('rounded') || blob.includes('clumping');
+  if(filter === 'medium height') return blob.includes('medium height') || blob.includes('mid height') || blob.includes('middle of border') || (maxHeight !== null && maxHeight > 18 && maxHeight <= 48);
+  if(filter === 'tall upright') return blob.includes('tall upright') || blob.includes('upright') || blob.includes('vertical') || blob.includes('back of border') || (maxHeight !== null && maxHeight > 48);
+  if(filter === 'narrow') return blob.includes('narrow') || blob.includes('columnar') || blob.includes('tight space');
+  if(filter === 'spreading') return blob.includes('spreading') || blob.includes('filler') || blob.includes('fills in');
+  if(filter === 'trailing') return blob.includes('trailing') || blob.includes('spiller') || blob.includes('cascading') || blob.includes('hanging basket');
+  if(filter === 'privacy') return blob.includes('privacy') || blob.includes('screen') || blob.includes('screening') || blob.includes('hedge');
+  return false;
+}
+
+function matchesGeneralFilter(p, filter){
+  p = normalizePlant(p);
+  const blob = filterBlob(p);
   const f = normalizeText(filter);
   const map = {
-    'annual':['annual','premium annual','seed annual','bedding annual'],
-    'perennial':['perennial','hardy perennial'],
-    'shrub':['shrub','evergreen shrub','foundation plant'],
-    'tree':['tree'],
-    'edible':['edible','vegetable','fruit','herb'],
-    'houseplant':['houseplant','indoor plant'],
-    'sun':['sun','full sun','sunny','hot sunny'],
-    'part shade':['part shade','partial shade','morning sun','afternoon shade','sun to part shade','shade to part shade'],
-    'shade':['shade','woodland','shade annual','shade perennial'],
-    'dry shade':['dry shade','under trees','woodland dry shade'],
-    'groundcover':['groundcover','ground cover','creeping','mat forming','low spreading'],
-    'low front':['low front','front border','edging','low mounding','compact'],
-    'mounding':['mounding','mound','rounded','clumping','compact'],
-    'medium height':['medium height','mid height','middle of border','medium'],
-    'tall upright':['tall upright','tall','upright','vertical','spike','back of border'],
-    'narrow':['narrow','columnar','tight space','narrow spot'],
-    'spreading':['spreading','filler','fills in','vigorous'],
-    'trailing':['trailing','spiller','cascading','hanging basket'],
-    'privacy':['privacy','screen','screening','hedge'],
     'yellow flowers':['yellow flowers','yellow','gold','golden'],
-    'purple flowers':['purple flowers','purple','violet','lavender'],
-    'blue flowers':['blue flowers','blue'],
+    'purple flowers':['purple flowers','purple','violet','mauve','lavender'],
+    'blue flowers':['blue flowers','blue','sapphire'],
     'white flowers':['white flowers','white','cream'],
     'pink flowers':['pink flowers','pink','rose'],
     'red flowers':['red flowers','red','scarlet','crimson','burgundy'],
     'orange flowers':['orange flowers','orange','coral','apricot','peach'],
-    'spring bloom':['spring bloom','spring','early season'],
-    'summer bloom':['summer bloom','summer','all summer'],
-    'fall color':['fall color','autumn color','fall'],
-    'winter interest':['winter interest','winter','evergreen'],
-    'evergreen':['evergreen','semi evergreen','semi-evergreen'],
-    'long blooming':['long blooming','long bloom','repeat bloom','rebloom','all summer','extended bloom'],
-    'pollinator':['pollinator','bee','bees','butterfly','butterflies'],
+    'pollinator':['pollinator','bee','bees'],
     'hummingbird':['hummingbird','hummingbirds'],
     'butterfly':['butterfly','butterflies'],
     'bird friendly':['bird friendly','birds','berries','seed heads'],
@@ -1298,52 +1284,49 @@ function filterSynonyms(filter){
     'low water':['low water','drought tolerant','dry once established','xeric'],
     'moderate water':['moderate water','regular water','average moisture'],
     'moist soil':['moist soil','moist','wet soil','bog'],
-    'low maintenance':['low maintenance','easy care','easy','tough','reliable'],
+    'low maintenance':['low maintenance','easy care','tough','reliable'],
     'fast growing':['fast growing','quick growing','vigorous'],
     'container':['container','pot','hanging basket','thriller','spiller'],
     'native':['native','pnw native','oregon native','pacific northwest native'],
     'fragrant':['fragrant','scent','scented']
   };
-  return map[f] || [f];
+  const terms = map[f] || [f];
+  return terms.some(term => exactContains(blob, term) || blob.includes(normalizeText(term)));
+}
+
+function matchesCustomerFilter(p, filter){
+  const f = normalizeText(filter);
+
+  if(['annual','perennial','shrub','tree','edible','houseplant'].includes(f)) return matchesTypeFilter(p, f);
+  if(['sun','part shade','shade','dry shade'].includes(f)) return matchesLightFilter(p, f);
+  if(['spring bloom','summer bloom','fall color','winter interest','evergreen','long blooming'].includes(f)) return matchesSeasonFilter(p, f);
+  if(['groundcover','low front','mounding','medium height','tall upright','narrow','spreading','trailing','privacy'].includes(f)) return matchesSizeShapeFilter(p, f);
+
+  return matchesGeneralFilter(p, f);
 }
 
 function scoreCustomerMatch(p, filters, keyword){
+  // v21.3: Customer filter buttons now use strict AND logic.
+  // Adding another filter can only narrow results, never expand them.
+  p = normalizePlant(p);
   const text = customerSearchText(p);
-  let score = 0;
-  let misses = 0;
 
-  filters.forEach(f => {
-    const nf = normalizeText(f);
-    let matched = false;
-
-    if(nf === 'shade') matched = matchesTrueShade(p, text);
-    else if(nf === 'part shade') matched = matchesPartShade(p, text);
-    else {
-      matched = filterSynonyms(nf).some(term => text.includes(normalizeText(term)));
-    }
-
-    if(matched) score += 10;
-    else misses += 1;
-  });
+  const allFiltersMatch = filters.every(f => matchesCustomerFilter(p, f));
+  if(!allFiltersMatch) return {score:0, matched:false, text};
 
   if(keyword){
     const nk = normalizeText(keyword);
-    if(text.includes(nk)) score += 8;
-    else {
-      const pieces = nk.split(' ').filter(w => w.length > 2);
-      const hits = pieces.filter(w => text.includes(w)).length;
-      if(hits) score += Math.min(6, hits * 2);
-      else misses += 1;
-    }
+    if(!text.includes(nk)) return {score:0, matched:false, text};
   }
 
-  // Helpful ranking boosts so the best nursery suggestions rise first.
+  let score = filters.length * 10;
+  if(keyword) score += 8;
   if(text.includes('long blooming')) score += 1;
   if(text.includes('low maintenance')) score += 1;
   if(text.includes('pollinator')) score += 1;
   if(text.includes('container')) score += 1;
 
-  return {score, misses, text};
+  return {score, matched:true, text};
 }
 
 function findCustomerMatches(){
@@ -1360,34 +1343,15 @@ function findCustomerMatches(){
     return;
   }
 
-  let scored = plants
+  let display = plants
     .map((p,i)=>({p:normalizePlant(p),i}))
     .map(item => ({...item, ...scoreCustomerMatch(item.p, activeFilters, keyword)}))
-    .filter(item => item.score > 0);
-
-  let exactMatches = scored.filter(item => item.misses === 0);
-  let closeMatches = scored.filter(item => item.misses > 0 && item.misses <= Math.max(1, Math.ceil(activeFilters.length / 2)));
-
-  exactMatches.sort((a,b)=>b.score-a.score || a.p.name.localeCompare(b.p.name));
-  closeMatches.sort((a,b)=>b.score-a.score || a.p.name.localeCompare(b.p.name));
-  scored.sort((a,b)=>b.score-a.score || a.p.name.localeCompare(b.p.name));
-
-  let display = exactMatches.length ? exactMatches : closeMatches;
-  let label = exactMatches.length
-    ? `Recommendations (${exactMatches.length})`
-    : `Close matches (${closeMatches.length}) — try removing one filter for more results`;
-
-  // v21.1 safety net: if no close matches but something partially matched, show the
-  // best partial matches instead of a dead-end empty result.
-  if(!display.length && scored.length){
-    display = scored.slice(0,15);
-    label = `Partial matches (${scored.length}) — try fewer filters for better results`;
-  }
+    .filter(item => item.matched)
+    .sort((a,b)=>b.score-a.score || a.p.name.localeCompare(b.p.name));
 
   if(display.length){
-    header.textContent = label;
+    header.textContent = `Recommendations (${display.length})`;
     results.innerHTML = display
-      .slice(0,15)
       .map(item => renderCard(item.p,item.i))
       .join('');
   } else {
