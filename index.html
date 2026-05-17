@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ALS Sherwood Plant Locator v21</title>
+<title>ALS Sherwood Plant Locator v21.2</title>
 <style>
   :root{
     --green:#1f5c2d;
@@ -558,7 +558,7 @@ function getMatches(query){
 
   return plants.map((p, i) => ({p: normalizePlant(p), i})).filter(item => {
     if(tableMatch){
-      return normalizeText(item.p.location) === q;
+      return locationMatches(item.p.location, q);
     }
     return plantSearchText(item.p).includes(q);
   });
@@ -915,12 +915,40 @@ function saveCustomLocations(){
   localStorage.setItem('alsCustomLocations', JSON.stringify(customLocations));
 }
 
+function locationParts(locationValue){
+  return String(locationValue || '')
+    .split(';')
+    .map(part => part.trim())
+    .filter(Boolean);
+}
+
+function joinLocationParts(parts){
+  const seen = new Set();
+  const out = [];
+  (parts || []).forEach(part => {
+    const clean = String(part || '').trim();
+    const key = normalizeText(clean);
+    if(clean && !seen.has(key)){
+      seen.add(key);
+      out.push(clean);
+    }
+  });
+  return out.join('; ');
+}
+
+function locationMatches(locationValue, targetLocation){
+  const target = normalizeText(targetLocation);
+  if(!target) return false;
+  return locationParts(locationValue).some(part => normalizeText(part) === target);
+}
+
 function getAllLocations(){
   const extraLocations = (typeof customLocations !== 'undefined' && Array.isArray(customLocations)) ? customLocations : [];
-  const plantLocations = plants
-    .map(p => normalizePlant(p).location || '')
-    .map(l => l.trim())
-    .filter(Boolean);
+  const plantLocations = [];
+
+  plants.forEach(p => {
+    locationParts(normalizePlant(p).location).forEach(loc => plantLocations.push(loc));
+  });
 
   const seen = new Set();
   const out = [];
@@ -969,7 +997,7 @@ function browseLocation(){
 
   const results = plants
     .map((p,i)=>({p:normalizePlant(p),i}))
-    .filter(item => item.p.location === location);
+    .filter(item => locationMatches(item.p.location, location));
 
   const resultsDiv = document.getElementById('results');
   const header = document.getElementById('resultsHeader');
@@ -1010,14 +1038,17 @@ function renameLocation(){
     return;
   }
 
-  const count = plants.map(normalizePlant).filter(p => p.location === oldLocation).length;
+  const count = plants.map(normalizePlant).filter(p => locationMatches(p.location, oldLocation)).length;
   const ok = confirm(`Rename "${oldLocation}" to "${newLocation}" for ${count} plant record(s)?`);
   if(!ok) return;
 
   plants = plants.map(p => {
     p = normalizePlant(p);
-    if(p.location === oldLocation){
-      p.location = newLocation;
+    if(locationMatches(p.location, oldLocation)){
+      const updatedLocations = locationParts(p.location).map(loc =>
+        normalizeText(loc) === normalizeText(oldLocation) ? newLocation : loc
+      );
+      p.location = joinLocationParts(updatedLocations);
     }
     return p;
   });
@@ -1085,6 +1116,14 @@ function setupCustomerFilterButtons(){
 
         btn.classList.add('active-filter');
 
+      }
+
+      // v21.1: make customer buttons feel responsive. If the user has already
+      // started using customer filters, refresh recommendations immediately.
+      const keywordEl = document.getElementById('customerKeyword');
+      const hasKeyword = keywordEl && keywordEl.value.trim();
+      if(activeFilters.length || hasKeyword){
+        findCustomerMatches();
       }
 
     });
@@ -1216,6 +1255,58 @@ function matchesPartShade(p, searchText){
   return searchText.includes('part shade');
 }
 
+function filterSynonyms(filter){
+  const f = normalizeText(filter);
+  const map = {
+    'annual':['annual','premium annual','seed annual','bedding annual'],
+    'perennial':['perennial','hardy perennial'],
+    'shrub':['shrub','evergreen shrub','foundation plant'],
+    'tree':['tree'],
+    'edible':['edible','vegetable','fruit','herb'],
+    'houseplant':['houseplant','indoor plant'],
+    'sun':['sun','full sun','sunny','hot sunny'],
+    'part shade':['part shade','partial shade','morning sun','afternoon shade','sun to part shade','shade to part shade'],
+    'shade':['shade','woodland','shade annual','shade perennial'],
+    'dry shade':['dry shade','under trees','woodland dry shade'],
+    'groundcover':['groundcover','ground cover','creeping','mat forming','low spreading'],
+    'low front':['low front','front border','edging','low mounding','compact'],
+    'mounding':['mounding','mound','rounded','clumping','compact'],
+    'medium height':['medium height','mid height','middle of border','medium'],
+    'tall upright':['tall upright','tall','upright','vertical','spike','back of border'],
+    'narrow':['narrow','columnar','tight space','narrow spot'],
+    'spreading':['spreading','filler','fills in','vigorous'],
+    'trailing':['trailing','spiller','cascading','hanging basket'],
+    'privacy':['privacy','screen','screening','hedge'],
+    'yellow flowers':['yellow flowers','yellow','gold','golden'],
+    'purple flowers':['purple flowers','purple','violet','lavender'],
+    'blue flowers':['blue flowers','blue'],
+    'white flowers':['white flowers','white','cream'],
+    'pink flowers':['pink flowers','pink','rose'],
+    'red flowers':['red flowers','red','scarlet','crimson','burgundy'],
+    'orange flowers':['orange flowers','orange','coral','apricot','peach'],
+    'spring bloom':['spring bloom','spring','early season'],
+    'summer bloom':['summer bloom','summer','all summer'],
+    'fall color':['fall color','autumn color','fall'],
+    'winter interest':['winter interest','winter','evergreen'],
+    'evergreen':['evergreen','semi evergreen','semi-evergreen'],
+    'long blooming':['long blooming','long bloom','repeat bloom','rebloom','all summer','extended bloom'],
+    'pollinator':['pollinator','bee','bees','butterfly','butterflies'],
+    'hummingbird':['hummingbird','hummingbirds'],
+    'butterfly':['butterfly','butterflies'],
+    'bird friendly':['bird friendly','birds','berries','seed heads'],
+    'deer resistant':['deer resistant'],
+    'low water':['low water','drought tolerant','dry once established','xeric'],
+    'moderate water':['moderate water','regular water','average moisture'],
+    'moist soil':['moist soil','moist','wet soil','bog'],
+    'low maintenance':['low maintenance','easy care','easy','tough','reliable'],
+    'fast growing':['fast growing','quick growing','vigorous'],
+    'container':['container','pot','hanging basket','thriller','spiller'],
+    'native':['native','pnw native','oregon native','pacific northwest native'],
+    'fragrant':['fragrant','scent','scented']
+  };
+  return map[f] || [f];
+}
+
 function scoreCustomerMatch(p, filters, keyword){
   const text = customerSearchText(p);
   let score = 0;
@@ -1223,13 +1314,13 @@ function scoreCustomerMatch(p, filters, keyword){
 
   filters.forEach(f => {
     const nf = normalizeText(f);
-    let matched = text.includes(nf);
+    let matched = false;
 
-    // Prevent the Shade button from accidentally matching every "part shade" or
-    // "sun to part shade" plant. True shade means the Light field is actually
-    // shade-oriented, or the notes/aliases specifically mention dry shade/woodland shade.
     if(nf === 'shade') matched = matchesTrueShade(p, text);
-    if(nf === 'part shade') matched = matchesPartShade(p, text);
+    else if(nf === 'part shade') matched = matchesPartShade(p, text);
+    else {
+      matched = filterSynonyms(nf).some(term => text.includes(normalizeText(term)));
+    }
 
     if(matched) score += 10;
     else misses += 1;
@@ -1241,7 +1332,7 @@ function scoreCustomerMatch(p, filters, keyword){
     else {
       const pieces = nk.split(' ').filter(w => w.length > 2);
       const hits = pieces.filter(w => text.includes(w)).length;
-      if(hits) score += Math.min(5, hits * 2);
+      if(hits) score += Math.min(6, hits * 2);
       else misses += 1;
     }
   }
@@ -1275,17 +1366,26 @@ function findCustomerMatches(){
     .filter(item => item.score > 0);
 
   let exactMatches = scored.filter(item => item.misses === 0);
-  let closeMatches = scored.filter(item => item.misses > 0 && item.misses <= 1);
+  let closeMatches = scored.filter(item => item.misses > 0 && item.misses <= Math.max(1, Math.ceil(activeFilters.length / 2)));
 
   exactMatches.sort((a,b)=>b.score-a.score || a.p.name.localeCompare(b.p.name));
   closeMatches.sort((a,b)=>b.score-a.score || a.p.name.localeCompare(b.p.name));
+  scored.sort((a,b)=>b.score-a.score || a.p.name.localeCompare(b.p.name));
 
-  const display = exactMatches.length ? exactMatches : closeMatches;
+  let display = exactMatches.length ? exactMatches : closeMatches;
+  let label = exactMatches.length
+    ? `Recommendations (${exactMatches.length})`
+    : `Close matches (${closeMatches.length}) — try removing one filter for more results`;
+
+  // v21.1 safety net: if no close matches but something partially matched, show the
+  // best partial matches instead of a dead-end empty result.
+  if(!display.length && scored.length){
+    display = scored.slice(0,15);
+    label = `Partial matches (${scored.length}) — try fewer filters for better results`;
+  }
 
   if(display.length){
-    header.textContent = exactMatches.length
-      ? `Recommendations (${exactMatches.length})`
-      : `Close matches (${closeMatches.length}) — try removing one filter for more results`;
+    header.textContent = label;
     results.innerHTML = display
       .slice(0,15)
       .map(item => renderCard(item.p,item.i))
