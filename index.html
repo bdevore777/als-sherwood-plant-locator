@@ -128,6 +128,7 @@
     <h2>Quick Search</h2>
     <div class="search-row">
       <input id="quickSearch" placeholder="Start typing plant name, botanical, alias, location..." autocomplete="off" />
+      <button onclick="renderSearch()">Search</button>
       <button class="light" onclick="clearSearch()">Clear</button>
     </div>
     <div id="suggestions" class="suggestions"></div>
@@ -348,6 +349,14 @@ try {
   if(!Array.isArray(lastImportIds)) lastImportIds = [];
 } catch(e) {
   lastImportIds = [];
+}
+
+let customLocations = [];
+try {
+  customLocations = JSON.parse(localStorage.getItem('alsCustomLocations') || '[]');
+  if(!Array.isArray(customLocations)) customLocations = [];
+} catch(e) {
+  customLocations = [];
 }
 
 const fields = {
@@ -901,14 +910,6 @@ function wipeAllData(){
   alert("All local plant records have been deleted from this browser.");
 }
 
-
-let customLocations = [];
-try {
-  customLocations = JSON.parse(localStorage.getItem('alsCustomLocations') || '[]');
-  if(!Array.isArray(customLocations)) customLocations = [];
-} catch(e) {
-  customLocations = [];
-}
 
 function saveCustomLocations(){
   localStorage.setItem('alsCustomLocations', JSON.stringify(customLocations));
