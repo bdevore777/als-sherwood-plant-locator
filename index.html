@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ALS Sherwood Plant Locator</title>
+<title>ALS Sherwood Plant Locator v20</title>
 <style>
   :root{
     --green:#1f5c2d;
@@ -87,13 +87,39 @@
   color:white;
   border:1px solid #2f7d3c;
 }
+
+.import-mode-box{
+  background:#f7fbf5;
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:10px 12px;
+  margin:10px 0;
+}
+.import-mode-box label{
+  display:block;
+  margin:7px 0;
+  line-height:1.25;
+}
+.import-mode-box input{
+  width:auto;
+  margin:0 8px 0 0;
+}
+.warning-note{
+  background:#fff7d6;
+  border:1px solid #eadb93;
+  border-radius:9px;
+  padding:8px 10px;
+  font-size:13px;
+  color:#5e5220;
+  margin:8px 0;
+}
 </style>
 </head>
 <body>
 
 <header>
   <h1>ALS Sherwood Plant Locator</h1>
-  <p>Fast plant lookup, table locations, and customer notes</p>
+  <p>Fast plant lookup, table locations, customer notes, and safer CSV updates</p>
 </header>
 
 <div class="container">
@@ -260,6 +286,13 @@
   <div class="section">
     <h2>Import / Backup</h2>
     <p class="small-note">Import CSV files made from plant tags. Export backup often so you do not lose phone data.</p>
+    <div class="warning-note">Recommended: use <strong>Update/replace matching plants</strong> for routine table uploads. Use <strong>Replace all</strong> only when importing a cleaned master database.</div>
+    <div class="import-mode-box">
+      <div class="filter-label">Import Mode</div>
+      <label><input type="radio" name="importMode" value="upsert" checked /> Update/replace matching plants + add new plants</label>
+      <label><input type="radio" name="importMode" value="replaceAll" /> Replace ALL saved plants with this CSV</label>
+      <label><input type="radio" name="importMode" value="addOnly" /> Add only new plants / skip matches</label>
+    </div>
     <input type="file" id="csvFile" accept=".csv,text/csv" />
     <button onclick="importCSV()">Import CSV</button>
     <button class="secondary" onclick="undoLastImport()">Undo Last Import</button>
@@ -350,6 +383,31 @@ function savePlants(){
 function saveLastImportIds(ids){
   lastImportIds = ids || [];
   localStorage.setItem('alsLastImportIds', JSON.stringify(lastImportIds));
+}
+
+function saveImportUndoSnapshot(beforePlants, description){
+  try {
+    localStorage.setItem('alsImportUndoSnapshot', JSON.stringify({
+      description: description || 'last import',
+      plants: beforePlants || []
+    }));
+  } catch(e) {
+    // If storage is full, imports still work; user should rely on exported backups.
+  }
+}
+
+function loadImportUndoSnapshot(){
+  try {
+    const raw = localStorage.getItem('alsImportUndoSnapshot');
+    if(!raw) return null;
+    const parsed = JSON.parse(raw);
+    if(parsed && Array.isArray(parsed.plants)) return parsed;
+  } catch(e) {}
+  return null;
+}
+
+function clearImportUndoSnapshot(){
+  localStorage.removeItem('alsImportUndoSnapshot');
 }
 
 function updateDatabaseCount(){
@@ -553,10 +611,80 @@ function plantKey(p){
   ].join("|");
 }
 
+function slugifyForId(value){
+  return normalizeText(value).replace(/\s+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+function stablePlantKey(p){
+  p = normalizePlant(p);
+  // Match by plant display name + category, not location or botanical name.
+  // This fixes stale duplicates where an older row had a slightly different botanical
+  // or wrong table but the same actual plant name. Category still separates cases like
+  // Annual Verbena vs Perennial Verbena.
+  return [
+    normalizeText(p.name),
+    normalizeText(p.category)
+  ].join('|');
+}
+
+function stablePlantId(p){
+  p = normalizePlant(p);
+  const base = [p.category, p.name].map(slugifyForId).filter(Boolean).join('_');
+  return 'als_' + (base || makeId()).slice(0,90);
+}
+
+function combineUniqueParts(values, separator){
+  const seen = new Set();
+  const out = [];
+  values.forEach(value => {
+    String(value || '').split(separator).forEach(part => {
+      const clean = part.trim();
+      const key = normalizeText(clean);
+      if(clean && !seen.has(key)){
+        seen.add(key);
+        out.push(clean);
+      }
+    });
+  });
+  return out.join(separator + ' ');
+}
+
+function mergePlantRecords(base, incoming){
+  base = normalizePlant(base);
+  incoming = normalizePlant(incoming);
+  const merged = {...base, ...incoming};
+  merged.location = combineUniqueParts([base.location, incoming.location], ';');
+  merged.notes = combineUniqueParts([base.notes, incoming.notes], ';');
+  merged.aliases = combineUniqueParts([base.aliases, incoming.aliases], /;/.test([base.aliases,incoming.aliases].join(' ')) ? ';' : ',');
+  merged.id = stablePlantId(merged);
+  return merged;
+}
+
+function collapseIncomingPlants(incomingPlants){
+  const byKey = new Map();
+  incomingPlants.forEach(plant => {
+    const key = stablePlantKey(plant);
+    if(byKey.has(key)){
+      byKey.set(key, mergePlantRecords(byKey.get(key), plant));
+    } else {
+      byKey.set(key, plant);
+    }
+  });
+  return Array.from(byKey.values());
+}
+
 function importCSV(){
   const fileInput = document.getElementById('csvFile');
   const file = fileInput.files[0];
   if(!file){ alert("Choose a CSV file first."); return; }
+
+  const selectedModeEl = document.querySelector('input[name="importMode"]:checked');
+  const importMode = selectedModeEl ? selectedModeEl.value : 'upsert';
+
+  if(importMode === 'replaceAll'){
+    const ok = confirm("Replace ALL saved plants with this CSV? Export a backup first if you have not already.");
+    if(!ok) return;
+  }
 
   const reader = new FileReader();
   reader.onload = function(e){
@@ -565,47 +693,118 @@ function importCSV(){
 
     const headers = rows[0].map(h => String(h || "").replace(/^\uFEFF/, "").trim());
     let imported = 0;
+    let updated = 0;
     let skipped = 0;
     const importedIds = [];
-
-    const existingKeys = new Set(plants.map(p => plantKey(p)));
+    const incomingPlants = [];
+    const incomingKeys = new Set();
+    const duplicateIncoming = [];
 
     for(let r=1; r<rows.length; r++){
       const obj = {};
       headers.forEach((h, i) => obj[h] = rows[r][i] || "");
       const plant = normalizePlant(obj);
+      if(!plant.name) continue;
 
-      if(plant.name){
-        plant.id = makeId();
-        const key = plantKey(plant);
-        if(existingKeys.has(key)){
+      // Every imported plant gets a stable ID. Existing random IDs from older exports
+      // are replaced so future imports can update the same plant cleanly.
+      plant.id = stablePlantId(plant);
+      const key = stablePlantKey(plant);
+      if(incomingKeys.has(key)){
+        duplicateIncoming.push(plant.name);
+      }
+      incomingKeys.add(key);
+      incomingPlants.push(plant);
+    }
+
+    if(!incomingPlants.length){
+      alert("No plant rows found in this CSV. Check that the header includes Plant Name.");
+      return;
+    }
+
+    const beforeImportPlants = plants.map(normalizePlant);
+    const collapsedIncomingPlants = collapseIncomingPlants(incomingPlants);
+
+    if(importMode === 'replaceAll'){
+      saveImportUndoSnapshot(beforeImportPlants, 'replace all import');
+      plants = collapsedIncomingPlants;
+      imported = collapsedIncomingPlants.length;
+      updated = 0;
+      skipped = 0;
+      savePlants();
+      saveLastImportIds(collapsedIncomingPlants.map(p => p.id));
+      clearFilePicker();
+      clearSearch();
+      alert(`Replaced database with ${imported} plants. ${duplicateIncoming.length ? duplicateIncoming.length + " duplicate row(s) were present in the CSV." : ""}`);
+      return;
+    }
+
+    saveImportUndoSnapshot(plants.map(normalizePlant), importMode === 'addOnly' ? 'add-only import' : 'update import');
+
+    const indexByStableKey = new Map();
+    plants = plants.map(normalizePlant);
+    const dedupedExisting = [];
+    plants.forEach(p => {
+      const key = stablePlantKey(p);
+      if(indexByStableKey.has(key)){
+        const existingIndex = indexByStableKey.get(key);
+        dedupedExisting[existingIndex] = mergePlantRecords(dedupedExisting[existingIndex], p);
+      } else {
+        indexByStableKey.set(key, dedupedExisting.length);
+        dedupedExisting.push(p);
+      }
+    });
+    plants = dedupedExisting;
+
+    collapsedIncomingPlants.forEach(plant => {
+      const key = stablePlantKey(plant);
+      if(indexByStableKey.has(key)){
+        if(importMode === 'addOnly'){
           skipped++;
         } else {
-          plants.push(plant);
-          existingKeys.add(key);
-          importedIds.push(plant.id);
-          imported++;
+          const idx = indexByStableKey.get(key);
+          // Full replacement prevents stale notes/aliases/locations from hanging around.
+          plants[idx] = plant;
+          updated++;
         }
+      } else {
+        plants.push(plant);
+        indexByStableKey.set(key, plants.length - 1);
+        importedIds.push(plant.id);
+        imported++;
       }
-    }
+    });
 
     savePlants();
     saveLastImportIds(importedIds);
     clearFilePicker();
     clearSearch();
-    alert(`Imported ${imported} new plants. Skipped ${skipped} duplicates. ${imported ? "You can undo this import if needed." : ""}`);
+    alert(`Import complete. Added ${imported}. Updated ${updated}. Skipped ${skipped}. ${duplicateIncoming.length ? duplicateIncoming.length + " duplicate row(s) were present in the CSV." : ""}`);
   };
   reader.readAsText(file);
 }
 
 function undoLastImport(){
+  const snapshot = loadImportUndoSnapshot();
+  if(snapshot){
+    const ok = confirm(`Undo ${snapshot.description || 'last import'} and restore the prior plant database?`);
+    if(!ok) return;
+    plants = snapshot.plants.map(normalizePlant);
+    savePlants();
+    saveLastImportIds([]);
+    clearImportUndoSnapshot();
+    clearSearch();
+    alert(`Restored database to ${plants.length} plant record(s) from before the last import.`);
+    return;
+  }
+
   if(!lastImportIds || !lastImportIds.length){
     alert("There is no recent import batch to undo.");
     return;
   }
 
   const count = lastImportIds.length;
-  const ok = confirm(`Undo the last import and remove ${count} plant record(s)? This will not remove manually entered plants or earlier imports.`);
+  const ok = confirm(`Undo the last add-only import and remove ${count} plant record(s)?`);
   if(!ok) return;
 
   const idSet = new Set(lastImportIds);
@@ -634,7 +833,7 @@ function exportBackup(){
   const lines = [headers.join(",")];
 
   plants.map(normalizePlant).forEach(p => {
-    lines.push([p.id,p.name,p.botanical,p.pronunciation,p.category,p.location,p.price,p.light,p.size,p.evergreen,p.notes,p.aliases].map(csvEscape).join(","));
+    lines.push([stablePlantId(p),p.name,p.botanical,p.pronunciation,p.category,p.location,p.price,p.light,p.size,p.evergreen,p.notes,p.aliases].map(csvEscape).join(","));
   });
 
   const blob = new Blob(['\uFEFF' + lines.join("\n")], {type:"text/csv;charset=utf-8"});
