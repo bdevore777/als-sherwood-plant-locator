@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ALS Sherwood Plant Locator v21.2</title>
+<title>ALS Sherwood Plant Locator v22</title>
 <style>
   :root{
     --green:#1f5c2d;
@@ -119,7 +119,7 @@
 
 <header>
   <h1>ALS Sherwood Plant Locator</h1>
-  <p>Fast plant lookup, exact location browsing, customer notes, and safer CSV updates</p>
+  <p>Fast lookup, exact locations, clean customer notes, and structured filter tags</p>
 </header>
 
 <div class="container">
@@ -164,7 +164,7 @@
 
   <div class="section">
     <h2>Find by Customer Need</h2>
-    <p class="small-note">Tap traits to find recommendation ideas for customers. Works from your saved notes, aliases, categories, light, size, and locations.</p>
+    <p class="small-note">Tap traits to find recommendation ideas for customers. Filters use structured Filter Tags. Quick Search still searches names, aliases, notes, locations, and more.</p>
 
     <div id="filterButtons">
 
@@ -186,7 +186,6 @@
           <button class="light filter-btn" data-filter="sun">Sun</button>
           <button class="light filter-btn" data-filter="part shade">Part Shade</button>
           <button class="light filter-btn" data-filter="shade">Shade</button>
-          <button class="light filter-btn" data-filter="dry shade">Dry Shade</button>
         </div>
       </div>
 
@@ -303,7 +302,10 @@
       <input id="aliases" placeholder="Aliases / search terms" />
     </div>
 
-    <textarea id="notes" placeholder="Notes / customer tidbits"></textarea>
+    <textarea id="notes" placeholder="Customer tidbit: one useful sales-friendly sentence"></textarea>
+
+    <textarea id="filterTags" placeholder="Filter Tags, e.g. shrub; sun; part shade; evergreen; spring bloom; compact"></textarea>
+    <textarea id="internalNotes" placeholder="Internal Notes, optional/admin only"></textarea>
 
     <button onclick="savePlant()">Save Plant</button>
     <button class="secondary" onclick="clearForm()">Clear Form</button>
@@ -370,7 +372,9 @@ const fields = {
   size: document.getElementById('size'),
   evergreen: document.getElementById('evergreen'),
   aliases: document.getElementById('aliases'),
-  notes: document.getElementById('notes')
+  notes: document.getElementById('notes'),
+  filterTags: document.getElementById('filterTags'),
+  internalNotes: document.getElementById('internalNotes')
 };
 
 function makeId(){
@@ -390,7 +394,9 @@ function normalizePlant(p){
     size: p.size || p["Size"] || "",
     evergreen: p.evergreen || p["Evergreen"] || "",
     aliases: p.aliases || p["Aliases"] || "",
-    notes: p.notes || p["Notes"] || ""
+    notes: p.notes || p["Notes"] || p["Customer Tidbits"] || "",
+    filterTags: p.filterTags || p["Filter Tags"] || p["FilterTags"] || "",
+    internalNotes: p.internalNotes || p["Internal Notes"] || p["InternalNotes"] || ""
   };
 }
 
@@ -452,7 +458,7 @@ function updateDatabaseCount(){
 
 function plantSearchText(p){
   p = normalizePlant(p);
-  return normalizeText([p.name,p.category,p.botanical,p.pronunciation,p.location,p.price,p.light,p.size,p.evergreen,p.aliases,p.notes].join(" "));
+  return normalizeText([p.name,p.category,p.botanical,p.pronunciation,p.location,p.price,p.light,p.size,p.evergreen,p.aliases,p.notes,p.filterTags].join(" "));
 }
 
 function savePlant(){
@@ -468,7 +474,9 @@ function savePlant(){
     size: fields.size.value.trim(),
     evergreen: fields.evergreen.value.trim(),
     aliases: fields.aliases.value.trim(),
-    notes: fields.notes.value.trim()
+    notes: fields.notes.value.trim(),
+    filterTags: fields.filterTags.value.trim(),
+    internalNotes: fields.internalNotes.value.trim()
   };
 
   if(!plant.name){
@@ -510,6 +518,8 @@ function editPlant(index){
   fields.evergreen.value = p.evergreen;
   fields.aliases.value = p.aliases;
   fields.notes.value = p.notes;
+  fields.filterTags.value = p.filterTags;
+  fields.internalNotes.value = p.internalNotes;
   editingIndex = index;
   document.getElementById("plantFormSection").scrollIntoView({behavior:"smooth"});
 }
@@ -540,7 +550,8 @@ function renderCard(p, index){
       ${p.price ? `<div class="field"><span class="label">Price:</span> ${escapeHTML(p.price)}</div>` : ""}
       ${p.size ? `<div class="field"><span class="label">Size:</span> ${escapeHTML(p.size)}</div>` : ""}
       ${p.aliases ? `<div class="field"><span class="label">Search aliases:</span> ${escapeHTML(p.aliases)}</div>` : ""}
-      ${p.notes ? `<div class="field"><span class="label">Customer tidbits:</span><br>${escapeHTML(p.notes)}</div>` : ""}
+      ${p.filterTags ? `<div class="field"><span class="label">Filter tags:</span> ${escapeHTML(p.filterTags)}</div>` : ""}
+      ${p.notes ? `<div class="field"><span class="label">Customer tidbit:</span><br>${escapeHTML(p.notes)}</div>` : ""}
       <div class="actions">
         <button onclick="editPlant(${index})">Edit</button>
         <button class="danger" onclick="deletePlant(${index})">Delete</button>
@@ -700,6 +711,8 @@ function mergePlantRecords(base, incoming){
   merged.location = combineUniqueParts([base.location, incoming.location], ';');
   merged.notes = combineUniqueParts([base.notes, incoming.notes], ';');
   merged.aliases = combineUniqueParts([base.aliases, incoming.aliases], /;/.test([base.aliases,incoming.aliases].join(' ')) ? ';' : ',');
+  merged.filterTags = combineUniqueParts([base.filterTags, incoming.filterTags], ';');
+  merged.internalNotes = combineUniqueParts([base.internalNotes, incoming.internalNotes], ';');
   merged.id = stablePlantId(merged);
   return merged;
 }
@@ -873,11 +886,11 @@ function csvEscape(value){
 }
 
 function exportBackup(){
-  const headers = ["ID","Plant Name","Botanical Name","Botanical Pronunciation","Category","Location","Price","Light","Size","Evergreen","Notes","Aliases"];
+  const headers = ["ID","Plant Name","Botanical Name","Botanical Pronunciation","Category","Location","Price","Light","Size","Evergreen","Notes","Aliases","Filter Tags","Internal Notes"];
   const lines = [headers.join(",")];
 
   plants.map(normalizePlant).forEach(p => {
-    lines.push([stablePlantId(p),p.name,p.botanical,p.pronunciation,p.category,p.location,p.price,p.light,p.size,p.evergreen,p.notes,p.aliases].map(csvEscape).join(","));
+    lines.push([stablePlantId(p),p.name,p.botanical,p.pronunciation,p.category,p.location,p.price,p.light,p.size,p.evergreen,p.notes,p.aliases,p.filterTags,p.internalNotes].map(csvEscape).join(","));
   });
 
   const blob = new Blob(['\uFEFF' + lines.join("\n")], {type:"text/csv;charset=utf-8"});
@@ -1153,8 +1166,9 @@ function estimateMaxHeightInches(sizeText){
 }
 
 
+
 function customerSearchText(p){
-  // General free-text search field used for optional keyword matching only.
+  // Broad quick/keyword search still uses multiple fields.
   p = normalizePlant(p);
   return normalizeText([
     p.name || '',
@@ -1165,149 +1179,31 @@ function customerSearchText(p){
     p.evergreen || '',
     p.botanical || '',
     p.aliases || '',
-    p.notes || ''
+    p.notes || '',
+    p.filterTags || ''
   ].join(' '));
 }
 
-function exactContains(text, term){
-  text = normalizeText(text);
-  term = normalizeText(term);
-  if(!term) return false;
-  return (` ${text} `).includes(` ${term} `);
-}
-
-function filterBlob(p){
+function tagList(p){
   p = normalizePlant(p);
-  return normalizeText([p.name, p.botanical, p.aliases, p.notes, p.size, p.location].join(' '));
+  return String(p.filterTags || '')
+    .split(/[;,]/)
+    .map(t => normalizeText(t))
+    .filter(Boolean);
 }
 
-function matchesTypeFilter(p, filter){
-  p = normalizePlant(p);
-  const cat = normalizeText(p.category);
-  const blob = filterBlob(p);
-
-  if(filter === 'annual') return cat.includes('annual');
-  if(filter === 'perennial') return cat.includes('perennial');
-  if(filter === 'shrub') return cat.includes('shrub');
-  if(filter === 'tree') return cat.includes('tree');
-  if(filter === 'edible') return cat.includes('edible') || cat.includes('vegetable') || cat.includes('fruit') || cat.includes('herb') || exactContains(blob,'edible');
-  if(filter === 'houseplant') return cat.includes('houseplant') || cat.includes('indoor') || exactContains(blob,'houseplant');
-  return false;
-}
-
-function matchesLightFilter(p, filter){
-  p = normalizePlant(p);
-  const light = normalizeText(p.light);
-  const blob = filterBlob(p);
-
-  if(filter === 'sun'){
-    return light.includes('sun');
-  }
-  if(filter === 'part shade'){
-    return light.includes('part shade') || light.includes('partial shade') || blob.includes('morning sun afternoon shade');
-  }
-  if(filter === 'shade'){
-    // Shade button means actual shade-tolerant, based primarily on Light field.
-    return light.includes('shade') || blob.includes('woodland shade') || blob.includes('dry shade');
-  }
-  if(filter === 'dry shade'){
-    return blob.includes('dry shade') || blob.includes('under trees') || blob.includes('tree roots');
-  }
-  return false;
-}
-
-function matchesSeasonFilter(p, filter){
-  p = normalizePlant(p);
-  const blob = filterBlob(p);
-  const evergreen = normalizeText(p.evergreen);
-
-  if(filter === 'spring bloom') return blob.includes('spring bloom') || blob.includes('blooms in spring') || blob.includes('early season');
-  if(filter === 'summer bloom') return blob.includes('summer bloom') || blob.includes('all summer') || blob.includes('flowers all summer');
-  if(filter === 'fall color') return blob.includes('fall color') || blob.includes('autumn color') || blob.includes('fall bloom');
-  if(filter === 'winter interest') return blob.includes('winter interest') || evergreen.includes('evergreen') || blob.includes('evergreen foliage');
-  if(filter === 'evergreen') return evergreen.includes('yes') || evergreen.includes('evergreen') || blob.includes('evergreen');
-  if(filter === 'long blooming') return blob.includes('long blooming') || blob.includes('long bloom') || blob.includes('repeat bloom') || blob.includes('rebloom') || blob.includes('nonstop') || blob.includes('all summer');
-  return false;
-}
-
-function estimateMaxHeightInches(sizeText){
-  const s = String(sizeText || '').toLowerCase();
-  if(!s.trim()) return null;
-  const matches = [...s.matchAll(/(\d+(?:\.\d+)?)\s*(?:-|–|to|x|×)?\s*(\d+(?:\.\d+)?)?\s*(ft|feet|foot|in|inch|inches|")/g)];
-  if(!matches.length) return null;
-  let max = null;
-  matches.forEach(m => {
-    const a = parseFloat(m[1]);
-    const b = m[2] ? parseFloat(m[2]) : a;
-    const unit = m[3];
-    let val = Math.max(a, b);
-    if(unit.startsWith('ft') || unit === 'feet' || unit === 'foot') val *= 12;
-    if(max === null || val > max) max = val;
-  });
-  return max;
-}
-
-function matchesSizeShapeFilter(p, filter){
-  p = normalizePlant(p);
-  const blob = filterBlob(p);
-  const maxHeight = estimateMaxHeightInches(p.size);
-
-  if(filter === 'groundcover') return blob.includes('groundcover') || blob.includes('ground cover') || blob.includes('creeping') || blob.includes('mat forming');
-  if(filter === 'low front') return blob.includes('low front') || blob.includes('front border') || blob.includes('edging') || (maxHeight !== null && maxHeight <= 18);
-  if(filter === 'mounding') return blob.includes('mounding') || blob.includes('mound') || blob.includes('rounded') || blob.includes('clumping');
-  if(filter === 'medium height') return blob.includes('medium height') || blob.includes('mid height') || blob.includes('middle of border') || (maxHeight !== null && maxHeight > 18 && maxHeight <= 48);
-  if(filter === 'tall upright') return blob.includes('tall upright') || blob.includes('upright') || blob.includes('vertical') || blob.includes('back of border') || (maxHeight !== null && maxHeight > 48);
-  if(filter === 'narrow') return blob.includes('narrow') || blob.includes('columnar') || blob.includes('tight space');
-  if(filter === 'spreading') return blob.includes('spreading') || blob.includes('filler') || blob.includes('fills in');
-  if(filter === 'trailing') return blob.includes('trailing') || blob.includes('spiller') || blob.includes('cascading') || blob.includes('hanging basket');
-  if(filter === 'privacy') return blob.includes('privacy') || blob.includes('screen') || blob.includes('screening') || blob.includes('hedge');
-  return false;
-}
-
-function matchesGeneralFilter(p, filter){
-  p = normalizePlant(p);
-  const blob = filterBlob(p);
-  const f = normalizeText(filter);
-  const map = {
-    'yellow flowers':['yellow flowers','yellow','gold','golden'],
-    'purple flowers':['purple flowers','purple','violet','mauve','lavender'],
-    'blue flowers':['blue flowers','blue','sapphire'],
-    'white flowers':['white flowers','white','cream'],
-    'pink flowers':['pink flowers','pink','rose'],
-    'red flowers':['red flowers','red','scarlet','crimson','burgundy'],
-    'orange flowers':['orange flowers','orange','coral','apricot','peach'],
-    'pollinator':['pollinator','bee','bees'],
-    'hummingbird':['hummingbird','hummingbirds'],
-    'butterfly':['butterfly','butterflies'],
-    'bird friendly':['bird friendly','birds','berries','seed heads'],
-    'deer resistant':['deer resistant'],
-    'low water':['low water','drought tolerant','dry once established','xeric'],
-    'moderate water':['moderate water','regular water','average moisture'],
-    'moist soil':['moist soil','moist','wet soil','bog'],
-    'low maintenance':['low maintenance','easy care','tough','reliable'],
-    'fast growing':['fast growing','quick growing','vigorous'],
-    'container':['container','pot','hanging basket','thriller','spiller'],
-    'native':['native','pnw native','oregon native','pacific northwest native'],
-    'fragrant':['fragrant','scent','scented']
-  };
-  const terms = map[f] || [f];
-  return terms.some(term => exactContains(blob, term) || blob.includes(normalizeText(term)));
+function hasFilterTag(p, tag){
+  const desired = normalizeText(tag);
+  return tagList(p).includes(desired);
 }
 
 function matchesCustomerFilter(p, filter){
-  const f = normalizeText(filter);
-
-  if(['annual','perennial','shrub','tree','edible','houseplant'].includes(f)) return matchesTypeFilter(p, f);
-  if(['sun','part shade','shade','dry shade'].includes(f)) return matchesLightFilter(p, f);
-  if(['spring bloom','summer bloom','fall color','winter interest','evergreen','long blooming'].includes(f)) return matchesSeasonFilter(p, f);
-  if(['groundcover','low front','mounding','medium height','tall upright','narrow','spreading','trailing','privacy'].includes(f)) return matchesSizeShapeFilter(p, f);
-
-  return matchesGeneralFilter(p, f);
+  // v22: filter buttons use ONLY the structured Filter Tags field.
+  return hasFilterTag(p, filter);
 }
 
 function scoreCustomerMatch(p, filters, keyword){
-  // v21.3: Customer filter buttons now use strict AND logic.
-  // Adding another filter can only narrow results, never expand them.
+  // Strict AND logic: every selected button must match a Filter Tag.
   p = normalizePlant(p);
   const text = customerSearchText(p);
 
@@ -1321,10 +1217,10 @@ function scoreCustomerMatch(p, filters, keyword){
 
   let score = filters.length * 10;
   if(keyword) score += 8;
-  if(text.includes('long blooming')) score += 1;
-  if(text.includes('low maintenance')) score += 1;
-  if(text.includes('pollinator')) score += 1;
-  if(text.includes('container')) score += 1;
+  if(hasFilterTag(p,'long blooming')) score += 1;
+  if(hasFilterTag(p,'low maintenance')) score += 1;
+  if(hasFilterTag(p,'pollinator')) score += 1;
+  if(hasFilterTag(p,'container')) score += 1;
 
   return {score, matched:true, text};
 }
